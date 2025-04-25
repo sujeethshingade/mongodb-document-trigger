@@ -32,3 +32,15 @@ It demonstrates the implementation of MongoDB change streams and triggers to cre
 
 5. **Access the application**
    Open [http://localhost:3000](http://localhost:3000) in your browser
+
+### MongoDB Change Stream Configuration
+
+- Pre/Post Image Retention: Default retention period - 3 days (259,200 seconds)
+
+- Full Document: Captures the complete state of documents after changes
+  
+- Document Preimage: Captures the document state before changes
+
+- Auto-resume: Automatically resumes change streams if interrupted
+
+- Event Ordering: Maintains consistent ordering of change events

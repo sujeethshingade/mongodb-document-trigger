@@ -1,3 +1,15 @@
+// Note: This trigger relies on pre and post images being enabled on the monitored collections.
+// Note: The default retention period (typically 3 days) will apply.
+// Note: This to be run in Mongosh Terminal after connecting to the Cluster.
+/*
+db.runCommand({
+ collMod: "auditLogs",
+ changeStreamPreAndPostImages: {
+   enabled: true
+ }
+})
+*/
+
 exports = async function(changeEvent) {
     console.log(JSON.stringify(changeEvent));
     
