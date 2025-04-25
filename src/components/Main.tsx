@@ -19,13 +19,11 @@ export default function Main() {
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Fetch data on component mount
     useEffect(() => {
         fetchUsers();
         fetchAuditLogs();
     }, []);
 
-    // Fetch users from API
     const fetchUsers = async () => {
         try {
             const response = await fetch('/api/users');
@@ -40,7 +38,6 @@ export default function Main() {
         }
     };
 
-    // Fetch audit logs from API
     const fetchAuditLogs = async () => {
         try {
             const response = await fetch('/api/audit-logs');
@@ -54,7 +51,6 @@ export default function Main() {
         }
     };
 
-    // Handle form input changes
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({
             ...formData,
@@ -62,7 +58,6 @@ export default function Main() {
         });
     };
 
-    // Handle form submission for creating or updating users
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -83,7 +78,6 @@ export default function Main() {
                 body: JSON.stringify(formData),
             });
 
-            // Check if the response is JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 throw new Error(`Expected JSON response but got ${contentType}`);
@@ -95,7 +89,6 @@ export default function Main() {
                 throw new Error(data.message || `Failed to ${isEditing ? 'update' : 'create'} user`);
             }
 
-            // Reset form and refresh data
             setFormData({ name: '', email: '', role: '' });
             setEditingUser(null);
             fetchUsers();
@@ -108,7 +101,6 @@ export default function Main() {
         }
     };
 
-    // Handle user edit
     const handleEditUser = (user: User) => {
         setEditingUser(user._id!);
         setFormData({
@@ -118,7 +110,6 @@ export default function Main() {
         });
     };
 
-    // Handle user deletion
     const handleDeleteUser = async (userId: string) => {
         if (!window.confirm('Are you sure you want to delete this user?')) {
             return;
@@ -131,7 +122,6 @@ export default function Main() {
                 method: 'DELETE',
             });
 
-            // Check if the response is JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 throw new Error(`Expected JSON response but got ${contentType}`);
@@ -143,7 +133,6 @@ export default function Main() {
                 throw new Error(data.message || 'Failed to delete user');
             }
 
-            // Refresh data after successful deletion
             fetchUsers();
             fetchAuditLogs();
         } catch (err) {
@@ -152,7 +141,6 @@ export default function Main() {
         }
     };
 
-    // Format date for display
     const formatDate = (dateString: string | Date) => {
         const date = new Date(dateString);
         return new Intl.DateTimeFormat('en-US', {
@@ -161,7 +149,6 @@ export default function Main() {
         }).format(date);
     };
 
-    // Get color class for operation type
     const getOperationColor = (operation: string) => {
         switch (operation) {
             case 'insert': return 'bg-green-100 text-green-800';
@@ -175,7 +162,6 @@ export default function Main() {
         <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
 
-                {/* User Management Form */}
                 <div className="bg-white shadow-md rounded-lg overflow-hidden">
                     <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                         <h2 className="text-xl font-semibold text-gray-800">
@@ -191,53 +177,55 @@ export default function Main() {
                         )}
 
                         <form onSubmit={handleSubmit}>
-                            <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="name">
-                                    Name
-                                </label>
-                                <input
-                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    id="name"
-                                    type="text"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
+                            <div className="flex flex-wrap md:flex-nowrap gap-4 mb-6">
+                                <div className="w-full md:w-1/3">
+                                    <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="name">
+                                        Name
+                                    </label>
+                                    <input
+                                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        id="name"
+                                        type="text"
+                                        name="name"
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
 
-                            <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="email">
-                                    Email
-                                </label>
-                                <input
-                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    id="email"
-                                    type="email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
+                                <div className="w-full md:w-1/3">
+                                    <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="email">
+                                        Email
+                                    </label>
+                                    <input
+                                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        id="email"
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
 
-                            <div className="mb-6">
-                                <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="role">
-                                    Role
-                                </label>
-                                <select
-                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    id="role"
-                                    name="role"
-                                    value={formData.role}
-                                    onChange={handleChange}
-                                    required
-                                >
-                                    <option value="">Select a role</option>
-                                    <option value="admin">Admin</option>
-                                    <option value="user">User</option>
-                                    <option value="guest">Guest</option>
-                                </select>
+                                <div className="w-full md:w-1/3">
+                                    <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="role">
+                                        Role
+                                    </label>
+                                    <select
+                                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        id="role"
+                                        name="role"
+                                        value={formData.role}
+                                        onChange={handleChange}
+                                        required
+                                    >
+                                        <option value="">Select a role</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="user">User</option>
+                                        <option value="guest">Guest</option>
+                                    </select>
+                                </div>
                             </div>
 
                             <div className="flex items-center justify-between">
@@ -267,7 +255,6 @@ export default function Main() {
                     </div>
                 </div>
 
-                {/* Users Table */}
                 <div className="bg-white shadow-md rounded-lg overflow-hidden mt-8">
                     <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                         <h2 className="text-xl font-semibold text-gray-800">Users</h2>
@@ -284,20 +271,20 @@ export default function Main() {
                                 No users found. Add a new user to get started.
                             </p>
                         ) : (
-                            <div className="overflow-x-auto">
+                            <div className="overflow-y-auto max-h-96">
                                 <table className="min-w-full leading-normal">
                                     <thead>
                                         <tr>
-                                            <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
                                                 Name
                                             </th>
-                                            <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
                                                 Email
                                             </th>
-                                            <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
                                                 Role
                                             </th>
-                                            <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
                                                 Actions
                                             </th>
                                         </tr>
@@ -346,7 +333,6 @@ export default function Main() {
                     </div>
                 </div>
 
-                {/* Audit Logs Section */}
                 <div className="bg-white shadow-md rounded-lg overflow-hidden mt-8">
                     <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                         <h2 className="text-xl font-semibold text-gray-800">Audit Logs</h2>
@@ -363,7 +349,7 @@ export default function Main() {
                                 No audit logs found. Changes to users will appear here.
                             </p>
                         ) : (
-                            <div className="space-y-3">
+                            <div className="space-y-3 overflow-y-auto max-h-96">
                                 {auditLogs.map((log) => (
                                     <div
                                         key={log._id}
