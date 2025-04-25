@@ -361,7 +361,7 @@ export default function Main() {
                                         >
                                             <div className="flex items-center">
                                                 <span className={`px-2 py-1 text-xs rounded-full ${getOperationColor(log.operationType)}`}>
-                                                    {log.operationType.toUpperCase()}
+                                                    {log.operationType}
                                                 </span>
                                                 <span className="ml-2 text-gray-700">
                                                     Document ID: <code className="bg-gray-100 px-1 py-0.5 rounded">{log.documentId}</code>

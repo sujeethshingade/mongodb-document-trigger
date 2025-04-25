@@ -32,23 +32,3 @@ It demonstrates the implementation of MongoDB change streams and triggers to cre
 
 5. **Access the application**
    Open [http://localhost:3000](http://localhost:3000) in your browser
-
-### MongoDB Client Setup
-
-The application uses a singleton pattern for MongoDB connections to prevent multiple connections during development:
-
-```typescript
-// src/lib/mongodb.ts
-// Singleton pattern ensures a single connection in development
-```
-
-
-### Performance Considerations
-
-- Audit logs can grow quickly for high-traffic applications
-- Consider implementing log rotation or archiving strategies
-- Use indexing on the audit log collection for better query performance:
-  ```javascript
-  db.auditLogs.createIndex({ timestamp: -1 });
-  db.auditLogs.createIndex({ collectionName: 1, documentId: 1 });
-  ```
