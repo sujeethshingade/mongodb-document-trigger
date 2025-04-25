@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, AuditLog } from '../lib/types';
+import { User, AuditLog } from '@/lib/types';
 
 export default function Main() {
     const [users, setUsers] = useState<User[]>([]);
@@ -153,162 +153,178 @@ export default function Main() {
     };
 
     return (
-        <div className="container mx-auto py-8 px-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="container mx-auto py-6 px-4 max-w-6xl">
+            <div className="space-y-10">
                 {/* User Management Section */}
-                <div>
-                    <h2 className="text-2xl font-bold mb-4">User Management</h2>
+                <div className="bg-white shadow-md rounded-lg overflow-hidden">
+                    <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                        <h2 className="text-xl font-semibold text-gray-800">User Management</h2>
+                    </div>
 
-                    {/* User Form */}
-                    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md mb-6">
-                        <h3 className="text-lg font-semibold mb-4">
-                            {editingUser ? 'Update User' : 'Create New User'}
-                        </h3>
+                    <div className="p-6">
+                        {/* User Form */}
+                        <form onSubmit={handleSubmit} className="mb-8 bg-gray-50 p-5 rounded-lg border border-gray-200">
+                            <h3 className="text-lg font-medium mb-4 text-gray-700">
+                                {editingUser ? 'Edit User' : 'Create New User'}
+                            </h3>
 
-                        {error && (
-                            <div className="p-3 mb-4 bg-red-100 text-red-700 rounded-md">
-                                {error}
+                            {error && (
+                                <div className="p-3 mb-4 bg-red-100 text-red-700 rounded-md text-sm">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="name"
+                                        name="name"
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                        required
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Email
+                                    </label>
+                                    <input
+                                        type="email"
+                                        id="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        required
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Role
+                                    </label>
+                                    <select
+                                        id="role"
+                                        name="role"
+                                        value={formData.role}
+                                        onChange={handleChange}
+                                        required
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="">Select role</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="user">User</option>
+                                        <option value="editor">Editor</option>
+                                    </select>
+                                </div>
                             </div>
-                        )}
 
-                        <div className="mb-4">
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                                Name
-                            </label>
-                            <input
-                                type="text"
-                                id="name"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                required
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                            />
-                        </div>
-
-                        <div className="mb-4">
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                                Email
-                            </label>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                required
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                            />
-                        </div>
-
-                        <div className="mb-4">
-                            <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                                Role
-                            </label>
-                            <select
-                                id="role"
-                                name="role"
-                                value={formData.role}
-                                onChange={handleChange}
-                                required
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                            >
-                                <option value="">Select role</option>
-                                <option value="admin">Admin</option>
-                                <option value="user">User</option>
-                                <option value="editor">Editor</option>
-                            </select>
-                        </div>
-
-                        <div className="flex gap-2">
-                            <button
-                                type="submit"
-                                disabled={isSubmitting}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                            >
-                                {isSubmitting ? 'Saving...' : editingUser ? 'Update' : 'Create'}
-                            </button>
-
-                            {editingUser && (
+                            <div className="flex gap-2">
                                 <button
-                                    type="button"
-                                    onClick={() => {
-                                        setEditingUser(null);
-                                        setFormData({ name: '', email: '', role: '' });
-                                    }}
-                                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
                                 >
-                                    Cancel
+                                    {isSubmitting ? 'Saving...' : editingUser ? 'Update' : 'Create'}
                                 </button>
+
+                                {editingUser && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setEditingUser(null);
+                                            setFormData({ name: '', email: '', role: '' });
+                                        }}
+                                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                )}
+                            </div>
+                        </form>
+
+                        {/* Users List */}
+                        <div>
+                            <h3 className="text-lg font-medium mb-4 text-gray-700">Users</h3>
+
+                            {loading.users ? (
+                                <div className="text-center py-4">
+                                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600"></div>
+                                    <p className="mt-2 text-gray-500">Loading users...</p>
+                                </div>
+                            ) : users.length === 0 ? (
+                                <p className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+                                    No users found. Create your first user above.
+                                </p>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200">
+                                            {users.map((user) => (
+                                                <tr key={user._id} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-4 whitespace-nowrap">{user.name}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                                                            {user.role}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                        <button
+                                                            onClick={() => handleEditUser(user)}
+                                                            className="text-blue-600 hover:text-blue-900 mr-4"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteUser(user._id!)}
+                                                            className="text-red-600 hover:text-red-900"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
                         </div>
-                    </form>
-
-                    {/* Users List */}
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h3 className="text-lg font-semibold mb-4">Users</h3>
-
-                        {loading.users ? (
-                            <p className="text-center py-4">Loading users...</p>
-                        ) : users.length === 0 ? (
-                            <p className="text-center py-4 text-gray-500">No users found.</p>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                            <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                        {users.map((user) => (
-                                            <tr key={user._id} className="hover:bg-gray-50">
-                                                <td className="px-4 py-2 whitespace-nowrap">{user.name}</td>
-                                                <td className="px-4 py-2 whitespace-nowrap">{user.email}</td>
-                                                <td className="px-4 py-2 whitespace-nowrap">
-                                                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                                                        {user.role}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
-                                                    <button
-                                                        onClick={() => handleEditUser(user)}
-                                                        className="text-blue-600 hover:text-blue-900 mr-3"
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteUser(user._id!)}
-                                                        className="text-red-600 hover:text-red-900"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
                     </div>
                 </div>
 
                 {/* Audit Logs Section */}
-                <div>
-                    <h2 className="text-2xl font-bold mb-4">Audit Logs</h2>
+                <div className="bg-white shadow-md rounded-lg overflow-hidden">
+                    <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                        <h2 className="text-xl font-semibold text-gray-800">Audit Logs</h2>
+                    </div>
 
-                    <div className="bg-white p-6 rounded-lg shadow-md">
+                    <div className="p-6">
                         {loading.logs ? (
-                            <p className="text-center py-4">Loading audit logs...</p>
+                            <div className="text-center py-4">
+                                <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600"></div>
+                                <p className="mt-2 text-gray-500">Loading audit logs...</p>
+                            </div>
                         ) : auditLogs.length === 0 ? (
-                            <p className="text-center py-4 text-gray-500">
+                            <p className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
                                 No audit logs found. Changes to users will appear here.
                             </p>
                         ) : (
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 {auditLogs.map((log) => (
                                     <div
                                         key={log._id}
@@ -318,14 +334,14 @@ export default function Main() {
                                             className="px-4 py-3 cursor-pointer flex justify-between items-center bg-gray-50"
                                             onClick={() => setExpandedLog(expandedLog === log._id ? null : log._id!)}
                                         >
-                                            <div>
-                                                <span className={`px-2 py-1 text-xs rounded-full ${getOperationColor(log.operationType)}`}>
+                                            <div className="flex items-center">
+                                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getOperationColor(log.operationType)}`}>
                                                     {log.operationType.toUpperCase()}
                                                 </span>
-                                                <span className="ml-2 text-gray-700 text-sm">
-                                                    Doc ID: <code className="bg-gray-100 px-1 py-0.5 rounded">{log.documentId}</code>
+                                                <span className="ml-3 text-gray-700 text-sm font-medium">
+                                                    ID: <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">{log.documentId}</code>
                                                 </span>
-                                                <span className="ml-2 text-gray-500 text-sm">
+                                                <span className="ml-3 text-gray-500 text-sm">
                                                     {formatDate(log.timestamp)}
                                                 </span>
                                             </div>
@@ -336,17 +352,17 @@ export default function Main() {
 
                                         {expandedLog === log._id && (
                                             <div className="p-4 border-t border-gray-200">
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
                                                         <h4 className="font-medium text-gray-700 mb-2">Previous State</h4>
-                                                        <pre className="bg-gray-50 p-3 rounded border border-gray-200 overflow-x-auto text-xs">
+                                                        <pre className="bg-gray-50 p-3 rounded border border-gray-200 overflow-x-auto text-xs h-48 overflow-y-auto">
                                                             {log.preImage ? JSON.stringify(log.preImage, null, 2) : 'No previous state (new document)'}
                                                         </pre>
                                                     </div>
 
                                                     <div>
                                                         <h4 className="font-medium text-gray-700 mb-2">Current State</h4>
-                                                        <pre className="bg-gray-50 p-3 rounded border border-gray-200 overflow-x-auto text-xs">
+                                                        <pre className="bg-gray-50 p-3 rounded border border-gray-200 overflow-x-auto text-xs h-48 overflow-y-auto">
                                                             {log.postImage ? JSON.stringify(log.postImage, null, 2) : 'No current state (deleted document)'}
                                                         </pre>
                                                     </div>
