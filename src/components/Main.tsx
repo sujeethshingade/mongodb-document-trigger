@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { User, AuditLog } from '@/lib/types';
 
 export default function Main() {
     const [users, setUsers] = useState<User[]>([]);
     const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState({ users: true, logs: true });
-    const [pollInterval, setPollInterval] = useState(1000);
+    const [refreshing, setRefreshing] = useState(false);
+    const [lastOperation, setLastOperation] = useState<string | null>(null);
 
     const [formData, setFormData] = useState<Partial<User>>({
         name: '',
@@ -19,66 +20,127 @@ export default function Main() {
     const [expandedLog, setExpandedLog] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const isMounted = useRef(true);
+    
+    const lastFetchTimeRef = useRef<number>(0);
+    const minFetchInterval = 500; 
 
-    useEffect(() => {
-        fetchUsers();
-        fetchAuditLogs();
-
-        const intervalId = setInterval(() => {
-            fetchAuditLogs();
-        }, pollInterval);
-
-        return () => clearInterval(intervalId);
-    }, [pollInterval]);
-
-    const temporarilyIncreasePollRate = () => {
-        setPollInterval(100);
-
-        setTimeout(() => {
-            setPollInterval(500);
-        }, 2000);
-
-        setTimeout(() => {
-            setPollInterval(1000);
-        }, 5000);
-    };
-
-    const fetchUsers = async () => {
-        try {
-            const response = await fetch('/api/users');
-            if (!response.ok) throw new Error('Failed to fetch users');
-            const data = await response.json();
-            setUsers(data);
-        } catch (err) {
-            console.error('Error fetching users:', err);
-            setError('Failed to load users');
-        } finally {
-            setLoading(prev => ({ ...prev, users: false }));
+    const shouldFetch = () => {
+        const now = Date.now();
+        if (now - lastFetchTimeRef.current > minFetchInterval) {
+            lastFetchTimeRef.current = now;
+            return true;
         }
+        return false;
     };
 
-    const fetchAuditLogs = async () => {
+    const fetchAuditLogs = useCallback(async (force = false) => {
+        if (!force && !shouldFetch()) return;
+        
+        if (!isMounted.current) return;
+        
         try {
-            const timestamp = new Date().getTime();
+            setRefreshing(true);
+            
+            const timestamp = Date.now();
             const cacheBuster = Math.random().toString(36).substring(2);
-            const response = await fetch(`/api/audit-logs?t=${timestamp}&nocache=${cacheBuster}`, {
+            const url = `/api/audit-logs?t=${timestamp}&cb=${cacheBuster}`;
+            
+            const response = await fetch(url, {
                 headers: {
                     'Cache-Control': 'no-cache, no-store, must-revalidate',
                     'Pragma': 'no-cache',
                     'Expires': '0',
-                    'X-Request-Time': new Date().toISOString()
                 },
-                cache: 'no-store'
+                cache: 'no-store',
+                next: { revalidate: 0 }
             });
+            
             if (!response.ok) throw new Error('Failed to fetch audit logs');
+            
             const data = await response.json();
-            setAuditLogs(data);
+            
+            if (isMounted.current) {
+                setAuditLogs(data);
+                setLoading(prev => ({ ...prev, logs: false }));
+            }
         } catch (err) {
             console.error('Error fetching audit logs:', err);
         } finally {
-            setLoading(prev => ({ ...prev, logs: false }));
+            if (isMounted.current) {
+                setRefreshing(false);
+            }
         }
-    };
+    }, []);
+
+    const fetchUsers = useCallback(async () => {
+        if (!isMounted.current) return;
+        
+        try {
+            const timestamp = Date.now();
+            const cacheBuster = Math.random().toString(36).substring(2);
+            const response = await fetch(`/api/users?t=${timestamp}&cb=${cacheBuster}`, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0',
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to fetch users');
+            const data = await response.json();
+            
+            if (isMounted.current) {
+                setUsers(data);
+                setLoading(prev => ({ ...prev, users: false }));
+            }
+        } catch (err) {
+            console.error('Error fetching users:', err);
+            if (isMounted.current) {
+                setError('Failed to load users');
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        isMounted.current = true;
+        fetchUsers();
+        fetchAuditLogs(true);
+        
+        return () => {
+            isMounted.current = false;
+        };
+    }, [fetchUsers, fetchAuditLogs]);
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            if (isMounted.current && !refreshing) {
+                fetchAuditLogs();
+            }
+        }, 3000);
+        
+        return () => clearInterval(intervalId);
+    }, [fetchAuditLogs, refreshing]);
+
+    useEffect(() => {
+        if (lastOperation) {
+            fetchAuditLogs(true);
+            
+            const fetchTimes = [500, 1000, 2000, 3000];
+            
+            fetchTimes.forEach(delay => {
+                setTimeout(() => {
+                    if (isMounted.current) {
+                        fetchAuditLogs(true);
+                    }
+                }, delay);
+            });
+            
+            setLastOperation(null);
+        }
+    }, [lastOperation, fetchAuditLogs]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({
@@ -120,17 +182,9 @@ export default function Main() {
 
             setFormData({ name: '', email: '', role: '' });
             setEditingUser(null);
-            fetchUsers();
-
-            temporarilyIncreasePollRate();
-
-            fetchAuditLogs();
-
-            [50, 150, 300, 600, 1000, 1500, 2500].forEach(delay => {
-                setTimeout(() => {
-                    fetchAuditLogs();
-                }, delay);
-            });
+            await fetchUsers();
+            
+            setLastOperation(isEditing ? 'update' : 'create');
         } catch (err) {
             console.error('Error saving user:', err);
             setError(err instanceof Error ? err.message : 'An error occurred');
@@ -171,21 +225,17 @@ export default function Main() {
                 throw new Error(data.message || 'Failed to delete user');
             }
 
-            fetchUsers();
-
-            temporarilyIncreasePollRate();
-
-            fetchAuditLogs();
-
-            [50, 150, 300, 600, 1000, 1500, 2500].forEach(delay => {
-                setTimeout(() => {
-                    fetchAuditLogs();
-                }, delay);
-            });
+            await fetchUsers();
+            
+            setLastOperation('delete');
         } catch (err) {
             console.error('Error deleting user:', err);
             alert(err instanceof Error ? err.message : 'Failed to delete user');
         }
+    };
+
+    const manualRefreshAuditLogs = () => {
+        fetchAuditLogs(true);
     };
 
     const formatDate = (dateString: string | Date) => {
@@ -381,8 +431,25 @@ export default function Main() {
                 </div>
 
                 <div className="bg-white shadow-md rounded-lg overflow-hidden mt-8">
-                    <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                    <div className="border-b border-gray-200 bg-gray-50 px-6 py-4 flex justify-between items-center">
                         <h2 className="text-xl font-semibold text-gray-800">Audit Logs</h2>
+                        <button 
+                            onClick={manualRefreshAuditLogs}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
+                            disabled={refreshing}
+                        >
+                            {refreshing ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Refreshing...
+                                </>
+                            ) : (
+                                'Refresh Logs'
+                            )}
+                        </button>
                     </div>
 
                     <div className="p-6">
