@@ -7,6 +7,7 @@ export default function Main() {
     const [users, setUsers] = useState<User[]>([]);
     const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState({ users: true, logs: true });
+    const [pollInterval, setPollInterval] = useState(1000);
 
     const [formData, setFormData] = useState<Partial<User>>({
         name: '',
@@ -25,10 +26,18 @@ export default function Main() {
 
         const intervalId = setInterval(() => {
             fetchAuditLogs();
-        }, 1000); 
+        }, pollInterval);
 
         return () => clearInterval(intervalId);
-    }, []);
+    }, [pollInterval]);
+
+    const temporarilyIncreasePollRate = () => {
+        setPollInterval(200);
+
+        setTimeout(() => {
+            setPollInterval(1000);
+        }, 3000);
+    };
 
     const fetchUsers = async () => {
         try {
@@ -46,10 +55,12 @@ export default function Main() {
 
     const fetchAuditLogs = async () => {
         try {
-            const response = await fetch(`/api/audit-logs?t=${new Date().getTime()}`, {
+            const cacheBuster = Math.random().toString(36).substring(2);
+            const response = await fetch(`/api/audit-logs?t=${new Date().getTime()}&nocache=${cacheBuster}`, {
                 headers: {
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
+                    'Cache-Control': 'no-store, max-age=0',
+                    'Pragma': 'no-cache',
+                    'X-Request-Time': new Date().toISOString()
                 }
             });
             if (!response.ok) throw new Error('Failed to fetch audit logs');
@@ -104,9 +115,15 @@ export default function Main() {
             setEditingUser(null);
             fetchUsers();
 
-            setTimeout(() => {
-                fetchAuditLogs();
-            }, 500);
+            temporarilyIncreasePollRate();
+
+            fetchAuditLogs();
+
+            [100, 300, 700, 1500].forEach(delay => {
+                setTimeout(() => {
+                    fetchAuditLogs();
+                }, delay);
+            });
         } catch (err) {
             console.error('Error saving user:', err);
             setError(err instanceof Error ? err.message : 'An error occurred');
@@ -148,9 +165,16 @@ export default function Main() {
             }
 
             fetchUsers();
-            setTimeout(() => {
-                fetchAuditLogs();
-            }, 500);
+
+            temporarilyIncreasePollRate();
+
+            fetchAuditLogs();
+
+            [100, 300, 700, 1500].forEach(delay => {
+                setTimeout(() => {
+                    fetchAuditLogs();
+                }, delay);
+            });
         } catch (err) {
             console.error('Error deleting user:', err);
             alert(err instanceof Error ? err.message : 'Failed to delete user');
