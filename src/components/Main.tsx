@@ -32,11 +32,15 @@ export default function Main() {
     }, [pollInterval]);
 
     const temporarilyIncreasePollRate = () => {
-        setPollInterval(200);
+        setPollInterval(100);
+
+        setTimeout(() => {
+            setPollInterval(500);
+        }, 2000);
 
         setTimeout(() => {
             setPollInterval(1000);
-        }, 3000);
+        }, 5000);
     };
 
     const fetchUsers = async () => {
@@ -55,13 +59,16 @@ export default function Main() {
 
     const fetchAuditLogs = async () => {
         try {
+            const timestamp = new Date().getTime();
             const cacheBuster = Math.random().toString(36).substring(2);
-            const response = await fetch(`/api/audit-logs?t=${new Date().getTime()}&nocache=${cacheBuster}`, {
+            const response = await fetch(`/api/audit-logs?t=${timestamp}&nocache=${cacheBuster}`, {
                 headers: {
-                    'Cache-Control': 'no-store, max-age=0',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
                     'Pragma': 'no-cache',
+                    'Expires': '0',
                     'X-Request-Time': new Date().toISOString()
-                }
+                },
+                cache: 'no-store'
             });
             if (!response.ok) throw new Error('Failed to fetch audit logs');
             const data = await response.json();
@@ -119,7 +126,7 @@ export default function Main() {
 
             fetchAuditLogs();
 
-            [100, 300, 700, 1500].forEach(delay => {
+            [50, 150, 300, 600, 1000, 1500, 2500].forEach(delay => {
                 setTimeout(() => {
                     fetchAuditLogs();
                 }, delay);
@@ -170,7 +177,7 @@ export default function Main() {
 
             fetchAuditLogs();
 
-            [100, 300, 700, 1500].forEach(delay => {
+            [50, 150, 300, 600, 1000, 1500, 2500].forEach(delay => {
                 setTimeout(() => {
                     fetchAuditLogs();
                 }, delay);
