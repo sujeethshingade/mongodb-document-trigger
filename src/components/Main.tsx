@@ -22,6 +22,12 @@ export default function Main() {
     useEffect(() => {
         fetchUsers();
         fetchAuditLogs();
+
+        const intervalId = setInterval(() => {
+            fetchAuditLogs();
+        }, 1000); 
+
+        return () => clearInterval(intervalId);
     }, []);
 
     const fetchUsers = async () => {
@@ -40,7 +46,12 @@ export default function Main() {
 
     const fetchAuditLogs = async () => {
         try {
-            const response = await fetch('/api/audit-logs');
+            const response = await fetch(`/api/audit-logs?t=${new Date().getTime()}`, {
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
             if (!response.ok) throw new Error('Failed to fetch audit logs');
             const data = await response.json();
             setAuditLogs(data);
@@ -92,7 +103,10 @@ export default function Main() {
             setFormData({ name: '', email: '', role: '' });
             setEditingUser(null);
             fetchUsers();
-            fetchAuditLogs();
+
+            setTimeout(() => {
+                fetchAuditLogs();
+            }, 500);
         } catch (err) {
             console.error('Error saving user:', err);
             setError(err instanceof Error ? err.message : 'An error occurred');
@@ -134,7 +148,9 @@ export default function Main() {
             }
 
             fetchUsers();
-            fetchAuditLogs();
+            setTimeout(() => {
+                fetchAuditLogs();
+            }, 500);
         } catch (err) {
             console.error('Error deleting user:', err);
             alert(err instanceof Error ? err.message : 'Failed to delete user');
