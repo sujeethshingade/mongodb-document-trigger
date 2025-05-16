@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { User, AuditLog } from '@/lib/types';
+import { User, Address, AuditLog } from '@/lib/types';
 
 export default function Main() {
     const [users, setUsers] = useState<User[]>([]);
@@ -9,22 +9,31 @@ export default function Main() {
     const [loading, setLoading] = useState({ users: true, logs: true });
     const [refreshing, setRefreshing] = useState(false);
     const [lastOperation, setLastOperation] = useState<string | null>(null);
+    const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
 
     const [formData, setFormData] = useState<Partial<User>>({
         name: '',
         email: '',
-        role: ''
+        role: null,
+        Address: {
+            AddressLine1: null,
+            AddressLine2: null,
+            City: null,
+            State: null,
+            Country: null,
+            ZipCode: null
+        }
     });
 
     const [editingUser, setEditingUser] = useState<string | null>(null);
     const [expandedLog, setExpandedLog] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     const isMounted = useRef(true);
-    
+
     const lastFetchTimeRef = useRef<number>(0);
-    const minFetchInterval = 500; 
+    const minFetchInterval = 500;
 
     const shouldFetch = () => {
         const now = Date.now();
@@ -37,16 +46,20 @@ export default function Main() {
 
     const fetchAuditLogs = useCallback(async (force = false) => {
         if (!force && !shouldFetch()) return;
-        
+
         if (!isMounted.current) return;
-        
+
         try {
             setRefreshing(true);
-            
+
             const timestamp = Date.now();
             const cacheBuster = Math.random().toString(36).substring(2);
-            const url = `/api/audit-logs?t=${timestamp}&cb=${cacheBuster}`;
-            
+            let url = `/api/audit-logs?t=${timestamp}&cb=${cacheBuster}`;
+
+            if (selectedDocumentId) {
+                url += `&documentId=${selectedDocumentId}`;
+            }
+
             const response = await fetch(url, {
                 headers: {
                     'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -56,11 +69,11 @@ export default function Main() {
                 cache: 'no-store',
                 next: { revalidate: 0 }
             });
-            
+
             if (!response.ok) throw new Error('Failed to fetch audit logs');
-            
+
             const data = await response.json();
-            
+
             if (isMounted.current) {
                 setAuditLogs(data);
                 setLoading(prev => ({ ...prev, logs: false }));
@@ -72,11 +85,11 @@ export default function Main() {
                 setRefreshing(false);
             }
         }
-    }, []);
+    }, [selectedDocumentId]);
 
     const fetchUsers = useCallback(async () => {
         if (!isMounted.current) return;
-        
+
         try {
             const timestamp = Date.now();
             const cacheBuster = Math.random().toString(36).substring(2);
@@ -88,10 +101,10 @@ export default function Main() {
                     'Expires': '0',
                 }
             });
-            
+
             if (!response.ok) throw new Error('Failed to fetch users');
             const data = await response.json();
-            
+
             if (isMounted.current) {
                 setUsers(data);
                 setLoading(prev => ({ ...prev, users: false }));
@@ -108,7 +121,7 @@ export default function Main() {
         isMounted.current = true;
         fetchUsers();
         fetchAuditLogs(true);
-        
+
         return () => {
             isMounted.current = false;
         };
@@ -120,16 +133,16 @@ export default function Main() {
                 fetchAuditLogs();
             }
         }, 3000);
-        
+
         return () => clearInterval(intervalId);
     }, [fetchAuditLogs, refreshing]);
 
     useEffect(() => {
         if (lastOperation) {
             fetchAuditLogs(true);
-            
+
             const fetchTimes = [500, 1000, 2000, 3000];
-            
+
             fetchTimes.forEach(delay => {
                 setTimeout(() => {
                     if (isMounted.current) {
@@ -137,16 +150,35 @@ export default function Main() {
                     }
                 }, delay);
             });
-            
+
             setLastOperation(null);
         }
     }, [lastOperation, fetchAuditLogs]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value,
-        });
+    useEffect(() => {
+        if (isMounted.current) {
+            fetchAuditLogs(true);
+        }
+    }, [selectedDocumentId, fetchAuditLogs]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+
+        if (name.startsWith('Address.')) {
+            const addressField = name.split('.')[1];
+            setFormData({
+                ...formData,
+                Address: {
+                    ...formData.Address,
+                    [addressField]: value === "" ? null : value,
+                }
+            });
+        } else {
+            setFormData({
+                ...formData,
+                [name]: value === "" ? null : value,
+            });
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -180,10 +212,22 @@ export default function Main() {
                 throw new Error(data.message || `Failed to ${isEditing ? 'update' : 'create'} user`);
             }
 
-            setFormData({ name: '', email: '', role: '' });
+            setFormData({
+                name: '',
+                email: '',
+                role: null,
+                Address: {
+                    AddressLine1: null,
+                    AddressLine2: null,
+                    City: null,
+                    State: null,
+                    Country: null,
+                    ZipCode: null
+                }
+            });
             setEditingUser(null);
             await fetchUsers();
-            
+
             setLastOperation(isEditing ? 'update' : 'create');
         } catch (err) {
             console.error('Error saving user:', err);
@@ -198,7 +242,15 @@ export default function Main() {
         setFormData({
             name: user.name,
             email: user.email,
-            role: user.role
+            role: user.role,
+            Address: user.Address || {
+                AddressLine1: null,
+                AddressLine2: null,
+                City: null,
+                State: null,
+                Country: null,
+                ZipCode: null
+            }
         });
     };
 
@@ -226,7 +278,7 @@ export default function Main() {
             }
 
             await fetchUsers();
-            
+
             setLastOperation('delete');
         } catch (err) {
             console.error('Error deleting user:', err);
@@ -253,6 +305,16 @@ export default function Main() {
             case 'delete': return 'bg-red-100 text-red-800';
             default: return 'bg-gray-100 text-gray-800';
         }
+    };
+
+    const getUniqueDocumentIds = () => {
+        const uniqueIds = new Set<string>();
+        auditLogs.forEach(log => {
+            if (log.documentId && log.documentId !== 'unknown') {
+                uniqueIds.add(log.documentId);
+            }
+        });
+        return Array.from(uniqueIds);
     };
 
     return (
@@ -284,7 +346,7 @@ export default function Main() {
                                         id="name"
                                         type="text"
                                         name="name"
-                                        value={formData.name}
+                                        value={formData.name || ''}
                                         onChange={handleChange}
                                         required
                                     />
@@ -299,7 +361,7 @@ export default function Main() {
                                         id="email"
                                         type="email"
                                         name="email"
-                                        value={formData.email}
+                                        value={formData.email || ''}
                                         onChange={handleChange}
                                         required
                                     />
@@ -313,15 +375,100 @@ export default function Main() {
                                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         id="role"
                                         name="role"
-                                        value={formData.role}
+                                        value={formData.role || ''}
                                         onChange={handleChange}
-                                        required
                                     >
                                         <option value="">Select a role</option>
                                         <option value="admin">Admin</option>
                                         <option value="user">User</option>
                                         <option value="guest">Guest</option>
                                     </select>
+                                </div>
+                            </div>
+
+                            <div className="mb-6">
+                                <h3 className="text-gray-700 text-sm font-semibold mb-2">Address</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label className="block text-gray-700 text-sm mb-2" htmlFor="Address.AddressLine1">
+                                            Address Line 1
+                                        </label>
+                                        <input
+                                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            id="Address.AddressLine1"
+                                            type="text"
+                                            name="Address.AddressLine1"
+                                            value={formData.Address?.AddressLine1 || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 text-sm mb-2" htmlFor="Address.AddressLine2">
+                                            Address Line 2
+                                        </label>
+                                        <input
+                                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            id="Address.AddressLine2"
+                                            type="text"
+                                            name="Address.AddressLine2"
+                                            value={formData.Address?.AddressLine2 || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-gray-700 text-sm mb-2" htmlFor="Address.City">
+                                            City
+                                        </label>
+                                        <input
+                                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            id="Address.City"
+                                            type="text"
+                                            name="Address.City"
+                                            value={formData.Address?.City || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 text-sm mb-2" htmlFor="Address.State">
+                                            State
+                                        </label>
+                                        <input
+                                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            id="Address.State"
+                                            type="text"
+                                            name="Address.State"
+                                            value={formData.Address?.State || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 text-sm mb-2" htmlFor="Address.Country">
+                                            Country
+                                        </label>
+                                        <input
+                                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            id="Address.Country"
+                                            type="text"
+                                            name="Address.Country"
+                                            value={formData.Address?.Country || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="mt-4">
+                                    <label className="block text-gray-700 text-sm mb-2" htmlFor="Address.ZipCode">
+                                        Zip Code
+                                    </label>
+                                    <input
+                                        className="shadow appearance-none border rounded w-full md:w-1/3 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        id="Address.ZipCode"
+                                        type="text"
+                                        name="Address.ZipCode"
+                                        value={formData.Address?.ZipCode || ''}
+                                        onChange={handleChange}
+                                    />
                                 </div>
                             </div>
 
@@ -341,7 +488,19 @@ export default function Main() {
                                         type="button"
                                         onClick={() => {
                                             setEditingUser(null);
-                                            setFormData({ name: '', email: '', role: '' });
+                                            setFormData({
+                                                name: '',
+                                                email: '',
+                                                role: null,
+                                                Address: {
+                                                    AddressLine1: null,
+                                                    AddressLine2: null,
+                                                    City: null,
+                                                    State: null,
+                                                    Country: null,
+                                                    ZipCode: null
+                                                }
+                                            });
                                         }}
                                     >
                                         Cancel
@@ -381,6 +540,9 @@ export default function Main() {
                                             <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
                                                 Role
                                             </th>
+                                            <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
+                                                Address
+                                            </th>
                                             <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
                                                 Actions
                                             </th>
@@ -400,12 +562,23 @@ export default function Main() {
                                                     <p className="text-gray-900 whitespace-no-wrap">{user.email}</p>
                                                 </td>
                                                 <td className="px-6 py-4 border-b border-gray-200">
-                                                    <span className={`px-2 py-1 text-xs rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                                                        user.role === 'user' ? 'bg-blue-100 text-blue-800' :
-                                                            'bg-gray-100 text-gray-800'
-                                                        }`}>
-                                                        {user.role}
-                                                    </span>
+                                                    {user.role ? (
+                                                        <span className={`px-2 py-1 text-xs rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                                                            user.role === 'user' ? 'bg-blue-100 text-blue-800' :
+                                                                'bg-gray-100 text-gray-800'
+                                                            }`}>
+                                                            {user.role}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-gray-500 text-sm">Not specified</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 border-b border-gray-200">
+                                                    <p className="text-gray-900 text-sm">
+                                                        {user.Address?.AddressLine1 ?
+                                                            `${user.Address.AddressLine1}${user.Address.City ? `, ${user.Address.City}` : ''}${user.Address.State ? `, ${user.Address.State}` : ''}`
+                                                            : 'Not provided'}
+                                                    </p>
                                                 </td>
                                                 <td className="px-6 py-4 border-b border-gray-200 text-right">
                                                     <button
@@ -431,84 +604,159 @@ export default function Main() {
                 </div>
 
                 <div className="bg-white shadow-md rounded-lg overflow-hidden mt-8">
-                    <div className="border-b border-gray-200 bg-gray-50 px-6 py-4 flex justify-between items-center">
-                        <h2 className="text-xl font-semibold text-gray-800">Audit Logs</h2>
-                        <button 
-                            onClick={manualRefreshAuditLogs}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
-                            disabled={refreshing}
-                        >
-                            {refreshing ? (
-                                <>
-                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Refreshing...
-                                </>
-                            ) : (
-                                'Refresh Logs'
-                            )}
-                        </button>
+                    <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                        <h2 className="text-xl font-semibold text-gray-800">Document History</h2>
                     </div>
 
                     <div className="p-6">
                         {loading.logs ? (
                             <div className="text-center py-4">
                                 <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600"></div>
-                                <p className="mt-2 text-gray-500">Loading audit logs...</p>
+                                <p className="mt-2 text-gray-500">Loading document IDs...</p>
                             </div>
-                        ) : auditLogs.length === 0 ? (
+                        ) : getUniqueDocumentIds().length === 0 ? (
                             <p className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
-                                No audit logs found. Changes to users will appear here.
+                                No documents with history found.
                             </p>
-                        ) : (
-                            <div className="space-y-3 overflow-y-auto max-h-96">
-                                {auditLogs.map((log) => (
-                                    <div
-                                        key={log._id}
-                                        className="border border-gray-200 rounded-lg overflow-hidden"
-                                    >
-                                        <div
-                                            className="px-4 py-3 cursor-pointer flex justify-between items-center bg-gray-50"
-                                            onClick={() => setExpandedLog(expandedLog === log._id ? null : log._id!)}
+                        ) : !selectedDocumentId ? (
+                            <div className="border rounded-lg overflow-hidden">
+                                <ul className="divide-y divide-gray-200">
+                                    {getUniqueDocumentIds().map(id => (
+                                        <li
+                                            key={id}
+                                            className="p-4 hover:bg-blue-50 cursor-pointer transition-colors"
+                                            onClick={() => setSelectedDocumentId(id)}
                                         >
                                             <div className="flex items-center">
-                                                <span className={`px-2 py-1 text-xs rounded-full ${getOperationColor(log.operationType)}`}>
-                                                    {log.operationType}
-                                                </span>
-                                                <span className="ml-2 text-gray-700">
-                                                    Document ID: <code className="bg-gray-100 px-1 py-0.5 rounded">{log.documentId}</code>
-                                                </span>
-                                                <span className="ml-2 text-gray-500 text-sm">
-                                                    {formatDate(log.timestamp)}
-                                                </span>
-                                            </div>
-                                            <button className="text-gray-400 hover:text-gray-600">
-                                                {expandedLog === log._id ? '▲' : '▼'}
-                                            </button>
-                                        </div>
-
-                                        {expandedLog === log._id && (
-                                            <div className="p-4 border-t border-gray-200">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <div>
-                                                        <h3 className="font-semibold text-gray-700 mb-2">Previous State</h3>
-                                                        <pre className="bg-white p-3 rounded border border-gray-200 overflow-x-auto text-sm">
-                                                            {log.preImage ? JSON.stringify(log.preImage, null, 2) : 'No previous state (new document)'}
-                                                        </pre>
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-semibold text-gray-700 mb-2">Current State</h3>
-                                                        <pre className="bg-white p-3 rounded border border-gray-200 overflow-x-auto text-sm">
-                                                            {log.postImage ? JSON.stringify(log.postImage, null, 2) : 'No current state (deleted document)'}
-                                                        </pre>
-                                                    </div>
+                                                <div className="mr-3">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                                                    </svg>
                                                 </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-gray-800">Document ID:</p>
+                                                    <p className="text-sm text-gray-600 font-mono">{id}</p>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="mb-4 flex justify-between items-center">
+                                    <h3 className="text-lg font-medium text-gray-800">
+                                        History for Document: <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{selectedDocumentId}</span>
+                                    </h3>
+                                    <div className="flex items-center">
+                                        <button
+                                            onClick={() => setSelectedDocumentId(null)}
+                                            className="mr-4 text-blue-600 hover:text-blue-800"
+                                        >
+                                            ← Back to all documents
+                                        </button>
+                                        <button
+                                            onClick={manualRefreshAuditLogs}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
+                                            disabled={refreshing}
+                                        >
+                                            {refreshing ? (
+                                                <>
+                                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Refreshing...
+                                                </>
+                                            ) : (
+                                                'Refresh History'
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {auditLogs.length === 0 ? (
+                                    <p className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+                                        No history found for this document.
+                                    </p>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full leading-normal">
+                                            <thead>
+                                                <tr>
+                                                    <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
+                                                        Timestamp
+                                                    </th>
+                                                    <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
+                                                        Operation
+                                                    </th>
+                                                    <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
+                                                        Changed Fields
+                                                    </th>
+                                                    <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
+                                                        Details
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {auditLogs.map((log) => (
+                                                    <tr key={log._id}>
+                                                        <td className="px-6 py-4 border-b border-gray-200">
+                                                            <p className="text-gray-900 text-sm whitespace-nowrap">{formatDate(log.timestamp)}</p>
+                                                        </td>
+                                                        <td className="px-6 py-4 border-b border-gray-200">
+                                                            <span className={`px-2 py-1 text-xs rounded-full ${getOperationColor(log.operationType)}`}>
+                                                                {log.operationType}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 border-b border-gray-200">
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {log.changedFields?.map((field, index) => (
+                                                                    <span key={index} className="px-2 py-1 text-xs bg-gray-100 rounded-full">
+                                                                        {field}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 border-b border-gray-200 text-center">
+                                                            <button
+                                                                onClick={() => setExpandedLog(expandedLog === log._id ? null : log._id!)}
+                                                                className="text-blue-600 hover:text-blue-900"
+                                                            >
+                                                                {expandedLog === log._id ? 'Hide Details' : 'View Details'}
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        {expandedLog && (
+                                            <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+                                                {auditLogs.find(log => log._id === expandedLog) && (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <div>
+                                                            <h3 className="font-semibold text-gray-700 mb-2">Previous Values</h3>
+                                                            <pre className="bg-white p-3 rounded border border-gray-200 overflow-x-auto text-sm">
+                                                                {auditLogs.find(log => log._id === expandedLog)?.preImage
+                                                                    ? JSON.stringify(auditLogs.find(log => log._id === expandedLog)?.preImage, null, 2)
+                                                                    : 'No previous values (new document)'}
+                                                            </pre>
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="font-semibold text-gray-700 mb-2">New Values</h3>
+                                                            <pre className="bg-white p-3 rounded border border-gray-200 overflow-x-auto text-sm">
+                                                                {auditLogs.find(log => log._id === expandedLog)?.postImage
+                                                                    ? JSON.stringify(auditLogs.find(log => log._id === expandedLog)?.postImage, null, 2)
+                                                                    : 'No new values (deleted document)'}
+                                                            </pre>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
-                                ))}
+                                )}
                             </div>
                         )}
                     </div>

@@ -10,6 +10,9 @@ db.runCommand({
 })
 */
 
+// db.users.deleteMany({});
+// db.auditLogs.deleteMany({});
+
 exports = async function(changeEvent) {
     console.log(JSON.stringify(changeEvent));
     
@@ -47,23 +50,61 @@ exports = async function(changeEvent) {
       collectionName: collectionName,
       documentId: documentId,
       timestamp: new Date(),
+      changedFields: [],
       preImage: null,
       postImage: null
     };
     
     if (operationType === "insert") {
       auditLog.postImage = changeEvent.fullDocument;
+      auditLog.changedFields = Object.keys(changeEvent.fullDocument).filter(key => key !== '_id');
     } 
     else if (operationType === "update" || operationType === "replace") {
-      auditLog.postImage = changeEvent.fullDocument;
-      
-      if (changeEvent.fullDocumentBeforeChange) {
+      if (changeEvent.fullDocument && changeEvent.fullDocumentBeforeChange) {
+        // Determine changed fields and store only those in pre/post images
+        const preImage = changeEvent.fullDocumentBeforeChange;
+        const postImage = changeEvent.fullDocument;
+        const changedFields = [];
+        const filteredPreImage = {};
+        const filteredPostImage = {};
+        
+        // Compare fields to find changes
+        for (const key in postImage) {
+          if (key === '_id') continue;
+          
+          // Check if the field is new or has changed
+          if (!preImage.hasOwnProperty(key) || 
+              JSON.stringify(preImage[key]) !== JSON.stringify(postImage[key])) {
+            changedFields.push(key);
+            filteredPostImage[key] = postImage[key];
+            if (preImage.hasOwnProperty(key)) {
+              filteredPreImage[key] = preImage[key];
+            }
+          }
+        }
+        
+        // Check for deleted fields
+        for (const key in preImage) {
+          if (key === '_id') continue;
+          if (!postImage.hasOwnProperty(key)) {
+            changedFields.push(key);
+            filteredPreImage[key] = preImage[key];
+          }
+        }
+        
+        auditLog.changedFields = changedFields;
+        auditLog.preImage = filteredPreImage;
+        auditLog.postImage = filteredPostImage;
+      } else {
+        // Fallback if full documents are not available
+        auditLog.postImage = changeEvent.fullDocument;
         auditLog.preImage = changeEvent.fullDocumentBeforeChange;
       }
     } 
     else if (operationType === "delete") {
       if (changeEvent.fullDocumentBeforeChange) {
         auditLog.preImage = changeEvent.fullDocumentBeforeChange;
+        auditLog.changedFields = Object.keys(changeEvent.fullDocumentBeforeChange).filter(key => key !== '_id');
       }
     }
     

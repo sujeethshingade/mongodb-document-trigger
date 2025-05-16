@@ -4,13 +4,22 @@ import clientPromise from '@/lib/mongodb';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const client = await clientPromise;
-    const db = client.db('test'); 
+    const db = client.db('test');
+    
+    const url = new URL(request.url);
+    const documentId = url.searchParams.get('documentId');
+    
+    const filter: any = {};
+    if (documentId) {
+      filter.documentId = documentId;
+    }
+    
     const auditLogs = await db
       .collection('auditLogs')
-      .find({})
+      .find(filter)
       .sort({ timestamp: -1 })
       .toArray();
     

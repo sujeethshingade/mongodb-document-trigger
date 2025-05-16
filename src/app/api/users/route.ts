@@ -29,6 +29,28 @@ export async function POST(request: Request) {
     userData.createdAt = new Date();
     userData.updatedAt = new Date();
 
+    if (!userData.role) {
+      userData.role = null;
+    }
+    
+    if (!userData.Address) {
+      userData.Address = {
+        AddressLine1: null,
+        AddressLine2: null,
+        City: null,
+        State: null,
+        Country: null,
+        ZipCode: null
+      };
+    } else {
+      const addressFields = ['AddressLine1', 'AddressLine2', 'City', 'State', 'Country', 'ZipCode'];
+      addressFields.forEach(field => {
+        if (!userData.Address[field]) {
+          userData.Address[field] = null;
+        }
+      });
+    }
+
     const result = await db.collection('users').insertOne(userData);
 
     return NextResponse.json(
