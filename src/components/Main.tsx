@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Address, AuditLog } from '@/lib/types';
+import Link from 'next/link';
 
 export default function Main() {
     const [users, setUsers] = useState<User[]>([]);
@@ -9,7 +10,10 @@ export default function Main() {
     const [loading, setLoading] = useState({ users: true, logs: true });
     const [refreshing, setRefreshing] = useState(false);
     const [lastOperation, setLastOperation] = useState<string | null>(null);
-    const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+    const [editingUser, setEditingUser] = useState<string | null>(null);
+    const [expandedLog, setExpandedLog] = useState<string | null>(null);
+    const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [formData, setFormData] = useState<Partial<User>>({
         name: '',
@@ -24,11 +28,6 @@ export default function Main() {
             ZipCode: null
         }
     });
-
-    const [editingUser, setEditingUser] = useState<string | null>(null);
-    const [expandedLog, setExpandedLog] = useState<string | null>(null);
-    const [error, setError] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const isMounted = useRef(true);
 
@@ -56,10 +55,6 @@ export default function Main() {
             const cacheBuster = Math.random().toString(36).substring(2);
             let url = `/api/audit-logs?t=${timestamp}&cb=${cacheBuster}`;
 
-            if (selectedDocumentId) {
-                url += `&documentId=${selectedDocumentId}`;
-            }
-
             const response = await fetch(url, {
                 headers: {
                     'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -85,7 +80,7 @@ export default function Main() {
                 setRefreshing(false);
             }
         }
-    }, [selectedDocumentId]);
+    }, []);
 
     const fetchUsers = useCallback(async () => {
         if (!isMounted.current) return;
@@ -154,12 +149,6 @@ export default function Main() {
             setLastOperation(null);
         }
     }, [lastOperation, fetchAuditLogs]);
-
-    useEffect(() => {
-        if (isMounted.current) {
-            fetchAuditLogs(true);
-        }
-    }, [selectedDocumentId, fetchAuditLogs]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -604,8 +593,25 @@ export default function Main() {
                 </div>
 
                 <div className="bg-white shadow-md rounded-lg overflow-hidden mt-8">
-                    <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                    <div className="border-b border-gray-200 bg-gray-50 px-6 py-4 flex justify-between items-center">
                         <h2 className="text-xl font-semibold text-gray-800">Document History</h2>
+                        <button
+                            onClick={manualRefreshAuditLogs}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
+                            disabled={refreshing}
+                        >
+                            {refreshing ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Refreshing...
+                                </>
+                            ) : (
+                                'Refresh Documents'
+                            )}
+                        </button>
                     </div>
 
                     <div className="p-6">
@@ -618,16 +624,15 @@ export default function Main() {
                             <p className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
                                 No documents with history found.
                             </p>
-                        ) : !selectedDocumentId ? (
+                        ) : (
                             <div className="border rounded-lg overflow-hidden">
                                 <ul className="divide-y divide-gray-200">
                                     {getUniqueDocumentIds().map(id => (
                                         <li
                                             key={id}
                                             className="p-4 hover:bg-blue-50 cursor-pointer transition-colors"
-                                            onClick={() => setSelectedDocumentId(id)}
                                         >
-                                            <div className="flex items-center">
+                                            <Link href={`/document/${id}`} className="flex items-center">
                                                 <div className="mr-3">
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
                                                         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
@@ -637,126 +642,10 @@ export default function Main() {
                                                     <p className="text-sm font-medium text-gray-800">Document ID:</p>
                                                     <p className="text-sm text-gray-600 font-mono">{id}</p>
                                                 </div>
-                                            </div>
+                                            </Link>
                                         </li>
                                     ))}
                                 </ul>
-                            </div>
-                        ) : (
-                            <div>
-                                <div className="mb-4 flex justify-between items-center">
-                                    <h3 className="text-lg font-medium text-gray-800">
-                                        History for Document: <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{selectedDocumentId}</span>
-                                    </h3>
-                                    <div className="flex items-center">
-                                        <button
-                                            onClick={() => setSelectedDocumentId(null)}
-                                            className="mr-4 text-blue-600 hover:text-blue-800"
-                                        >
-                                            ← Back to all documents
-                                        </button>
-                                        <button
-                                            onClick={manualRefreshAuditLogs}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
-                                            disabled={refreshing}
-                                        >
-                                            {refreshing ? (
-                                                <>
-                                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                    </svg>
-                                                    Refreshing...
-                                                </>
-                                            ) : (
-                                                'Refresh History'
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {auditLogs.length === 0 ? (
-                                    <p className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
-                                        No history found for this document.
-                                    </p>
-                                ) : (
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full leading-normal">
-                                            <thead>
-                                                <tr>
-                                                    <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
-                                                        Timestamp
-                                                    </th>
-                                                    <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
-                                                        Operation
-                                                    </th>
-                                                    <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
-                                                        Changed Fields
-                                                    </th>
-                                                    <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
-                                                        Details
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {auditLogs.map((log) => (
-                                                    <tr key={log._id}>
-                                                        <td className="px-6 py-4 border-b border-gray-200">
-                                                            <p className="text-gray-900 text-sm whitespace-nowrap">{formatDate(log.timestamp)}</p>
-                                                        </td>
-                                                        <td className="px-6 py-4 border-b border-gray-200">
-                                                            <span className={`px-2 py-1 text-xs rounded-full ${getOperationColor(log.operationType)}`}>
-                                                                {log.operationType}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4 border-b border-gray-200">
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {log.changedFields?.map((field, index) => (
-                                                                    <span key={index} className="px-2 py-1 text-xs bg-gray-100 rounded-full">
-                                                                        {field}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4 border-b border-gray-200 text-center">
-                                                            <button
-                                                                onClick={() => setExpandedLog(expandedLog === log._id ? null : log._id!)}
-                                                                className="text-blue-600 hover:text-blue-900"
-                                                            >
-                                                                {expandedLog === log._id ? 'Hide Details' : 'View Details'}
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-
-                                        {expandedLog && (
-                                            <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-                                                {auditLogs.find(log => log._id === expandedLog) && (
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                        <div>
-                                                            <h3 className="font-semibold text-gray-700 mb-2">Previous Values</h3>
-                                                            <pre className="bg-white p-3 rounded border border-gray-200 overflow-x-auto text-sm">
-                                                                {auditLogs.find(log => log._id === expandedLog)?.preImage
-                                                                    ? JSON.stringify(auditLogs.find(log => log._id === expandedLog)?.preImage, null, 2)
-                                                                    : 'No previous values (new document)'}
-                                                            </pre>
-                                                        </div>
-                                                        <div>
-                                                            <h3 className="font-semibold text-gray-700 mb-2">New Values</h3>
-                                                            <pre className="bg-white p-3 rounded border border-gray-200 overflow-x-auto text-sm">
-                                                                {auditLogs.find(log => log._id === expandedLog)?.postImage
-                                                                    ? JSON.stringify(auditLogs.find(log => log._id === expandedLog)?.postImage, null, 2)
-                                                                    : 'No new values (deleted document)'}
-                                                            </pre>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
                             </div>
                         )}
                     </div>
