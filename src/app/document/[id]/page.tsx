@@ -274,11 +274,28 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                                                                             const preAddress = log.preImage && log.preImage.Address ? log.preImage.Address : {};
                                                                             const postAddress = log.postImage && log.postImage.Address ? log.postImage.Address : {};
 
-                                                                            const addressFields = ['Address Line 1', 'Address Line 2', 'City', 'State', 'Country', 'Zip Code'];
-
                                                                             const changedAddressFields = (log.changedFields || [])
                                                                                 .filter(f => f.startsWith('Address.'))
                                                                                 .map(f => f.split('.')[1]);
+
+                                                                            const addressFieldsToShow = changedAddressFields.length > 0 ?
+                                                                                changedAddressFields :
+                                                                                Array.from(new Set([...Object.keys(preAddress), ...Object.keys(postAddress)]));
+
+                                                                            const filteredAddressFields = addressFieldsToShow.filter(addrField => {
+                                                                                const preValue = preAddress[addrField];
+                                                                                const postValue = postAddress[addrField];
+                                                                                const hasChanged = JSON.stringify(preValue) !== JSON.stringify(postValue);
+
+                                                                                const preValueEmpty = preValue === null || preValue === undefined || preValue === '';
+                                                                                const postValueEmpty = postValue === null || postValue === undefined || postValue === '';
+
+                                                                                return hasChanged || !preValueEmpty || !postValueEmpty;
+                                                                            });
+
+                                                                            if (filteredAddressFields.length === 0) {
+                                                                                return null;
+                                                                            }
 
                                                                             return (
                                                                                 <React.Fragment key={idx}>
@@ -287,11 +304,9 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                                                                                             Address
                                                                                         </td>
                                                                                     </tr>
-                                                                                    {addressFields.map((addrField, addrIdx) => {
+                                                                                    {filteredAddressFields.map((addrField, addrIdx) => {
                                                                                         const preValue = preAddress[addrField];
                                                                                         const postValue = postAddress[addrField];
-                                                                                        const hasChanged = changedAddressFields.includes(addrField) ||
-                                                                                            JSON.stringify(preValue) !== JSON.stringify(postValue);
 
                                                                                         return (
                                                                                             <tr key={`addr-${addrIdx}`}>

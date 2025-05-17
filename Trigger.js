@@ -74,25 +74,49 @@ exports = async function(changeEvent) {
         
         // Handling for Address object to track individual field changes
         if (key === 'Address' && typeof postImage[key] === 'object' && typeof preImage[key] === 'object') {
-          const addressFields = ['AddressLine1', 'AddressLine2', 'City', 'State', 'Country', 'ZipCode'];
+          const addressFieldMap = {
+            'AddressLine1': 'Address Line 1',
+            'AddressLine2': 'Address Line 2', 
+            'City': 'City',
+            'State': 'State',
+            'Country': 'Country',
+            'ZipCode': 'Zip Code'
+          };
           
           let addressChanged = false;
-          for (const addrField of addressFields) {
-            const preValue = preImage[key][addrField];
-            const postValue = postImage[key][addrField];
+          const changedAddressFields = [];
+          
+          for (const [dbField, displayField] of Object.entries(addressFieldMap)) {
+            const preValue = preImage[key][dbField];
+            const postValue = postImage[key][dbField];
             
             if (JSON.stringify(preValue) !== JSON.stringify(postValue)) {
-              changedFields.push(`Address.${addrField}`);
+              changedFields.push(`Address.${displayField}`);
+              changedAddressFields.push(displayField);
               addressChanged = true;
               
               if (!filteredPreImage[key]) filteredPreImage[key] = {};
               if (!filteredPostImage[key]) filteredPostImage[key] = {};
               
-              filteredPreImage[key][addrField] = preValue;
-              filteredPostImage[key][addrField] = postValue;
+              filteredPreImage[key][displayField] = preValue;
+              filteredPostImage[key][displayField] = postValue;
             }
           }
-          if (addressChanged) continue;
+          
+          if (addressChanged) {
+            if (!filteredPreImage[key]) filteredPreImage[key] = {};
+            if (!filteredPostImage[key]) filteredPostImage[key] = {};
+            
+            for (const displayField of changedAddressFields) {
+              const dbFieldName = Object.entries(addressFieldMap).find(([_, dispName]) => dispName === displayField)?.[0];
+              if (dbFieldName) {
+                filteredPreImage[key][displayField] = preImage[key][dbFieldName];
+                filteredPostImage[key][displayField] = postImage[key][dbFieldName];
+              }
+            }
+            
+            continue;
+          }
         }
         
         // Check if the field is new or has changed
