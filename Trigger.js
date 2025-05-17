@@ -1,15 +1,33 @@
 // Note: This trigger relies on pre and post images being enabled on the monitored collections.
-// Note: The default retention period (typically 3 days) will apply.
 // Note: This to be run in Mongosh Terminal after connecting to the Cluster.
 /*
-db.runCommand({
- collMod: "auditLogs",
- changeStreamPreAndPostImages: {
-   enabled: true
- }
+
+// Drop the existing TTL index (Time-To-Live)
+db.auditLogs.dropIndex("timestamp_1");
+
+// Create new TTL index with 7-day retention (604800 seconds)
+db.auditLogs.createIndex(
+  { "timestamp": 1 },
+  { expireAfterSeconds: 604800, name: "timestamp_1" }
+);
+
+// Verify the index was created
+db.auditLogs.getIndexes()
+
+// Setting up 7-day retention for pre/post images (requires admin privileges and M10 Cluster)
+db.adminCommand({ 
+  setClusterParameter: {
+    changeStreamOptions: { 
+      preAndPostImages: { 
+        expireAfterSeconds: 604800 // 7 days in seconds
+      } 
+    }
+  }
 })
+
 */
 
+// Clear data
 // db.users.deleteMany({});
 // db.auditLogs.deleteMany({});
 

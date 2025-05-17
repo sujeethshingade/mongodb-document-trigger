@@ -35,7 +35,7 @@ It demonstrates the implementation of MongoDB change streams and triggers to cre
 
 ### MongoDB Change Stream Configuration
 
-- Pre/Post Image Retention: Default retention period - 3 days (259,200 seconds)
+- Pre/Post Image Retention (TTL): 7 days (604800 seconds)
 
 - Full Document: Captures the complete state of documents after changes
   
