@@ -230,7 +230,9 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                                                     <div className="flex flex-wrap gap-1">
                                                         {log.changedFields?.map((field, idx) => (
                                                             <span key={idx} className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded">
-                                                                {field}
+                                                                {field.startsWith('Address.') ?
+                                                                    `Address: ${field.split('.')[1]}` :
+                                                                    field}
                                                             </span>
                                                         ))}
                                                     </div>
@@ -264,21 +266,71 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                                                                 </thead>
                                                                 <tbody className="bg-white divide-y divide-gray-200">
                                                                     {log.changedFields?.map((field, idx) => {
-                                                                        const preValue = log.preImage ? log.preImage[field] : null;
-                                                                        const postValue = log.postImage ? log.postImage[field] : null;
-                                                                        return (
-                                                                            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                                                                <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                                                                                    {field}
-                                                                                </td>
-                                                                                <td className="px-4 py-2 text-sm text-gray-700">
-                                                                                    {renderFieldValue(preValue, true, log.operationType)}
-                                                                                </td>
-                                                                                <td className="px-4 py-2 text-sm text-gray-700">
-                                                                                    {renderFieldValue(postValue, false, log.operationType)}
-                                                                                </td>
-                                                                            </tr>
-                                                                        );
+                                                                        if (field === 'Address' || field.startsWith('Address.')) {
+                                                                            if (idx !== (log.changedFields || []).findIndex(f => f === 'Address' || f.startsWith('Address.'))) {
+                                                                                return null;
+                                                                            }
+
+                                                                            const preAddress = log.preImage && log.preImage.Address ? log.preImage.Address : {};
+                                                                            const postAddress = log.postImage && log.postImage.Address ? log.postImage.Address : {};
+
+                                                                            const addressFields = ['Address Line 1', 'Address Line 2', 'City', 'State', 'Country', 'Zip Code'];
+
+                                                                            const changedAddressFields = (log.changedFields || [])
+                                                                                .filter(f => f.startsWith('Address.'))
+                                                                                .map(f => f.split('.')[1]);
+
+                                                                            return (
+                                                                                <React.Fragment key={idx}>
+                                                                                    <tr className="bg-gray-100">
+                                                                                        <td colSpan={3} className="px-4 py-2 text-sm text-gray-600">
+                                                                                            Address
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                    {addressFields.map((addrField, addrIdx) => {
+                                                                                        const preValue = preAddress[addrField];
+                                                                                        const postValue = postAddress[addrField];
+                                                                                        const hasChanged = changedAddressFields.includes(addrField) ||
+                                                                                            JSON.stringify(preValue) !== JSON.stringify(postValue);
+
+                                                                                        return (
+                                                                                            <tr key={`addr-${addrIdx}`}>
+                                                                                                <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                                                                                                    {addrField}
+                                                                                                </td>
+                                                                                                <td className="px-4 py-2 text-sm text-gray-700">
+                                                                                                    {renderFieldValue(preValue, true, log.operationType)}
+                                                                                                </td>
+                                                                                                <td className="px-4 py-2 text-sm text-gray-700">
+                                                                                                    {renderFieldValue(postValue, false, log.operationType)}
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                        );
+                                                                                    })}
+                                                                                </React.Fragment>
+                                                                            );
+                                                                        }
+
+                                                                        if (!field.startsWith('Address.')) {
+                                                                            const preValue = log.preImage ? log.preImage[field] : null;
+                                                                            const postValue = log.postImage ? log.postImage[field] : null;
+
+                                                                            return (
+                                                                                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                                                    <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                                                                                        {field}
+                                                                                    </td>
+                                                                                    <td className="px-4 py-2 text-sm text-gray-700">
+                                                                                        {renderFieldValue(preValue, true, log.operationType)}
+                                                                                    </td>
+                                                                                    <td className="px-4 py-2 text-sm text-gray-700">
+                                                                                        {renderFieldValue(postValue, false, log.operationType)}
+                                                                                    </td>
+                                                                                </tr>
+                                                                            );
+                                                                        }
+
+                                                                        return null;
                                                                     })}
                                                                 </tbody>
                                                             </table>
