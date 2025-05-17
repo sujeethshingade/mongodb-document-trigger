@@ -15,9 +15,11 @@ export default function UsersList({ users, loading, onEditUser, onDeleteUser }: 
 
         const parts = [];
         if (address.AddressLine1) parts.push(address.AddressLine1);
+        if (address.AddressLine2) parts.push(address.AddressLine2);
         if (address.City) parts.push(address.City);
         if (address.State) parts.push(address.State);
         if (address.Country) parts.push(address.Country);
+        if (address.ZipCode) parts.push(address.ZipCode);
 
         return parts.length > 0 ? parts.join(', ') : 'Not provided';
     };

@@ -130,6 +130,18 @@ export async function PUT(
       });
     }
     
+    const updateResult = await db.collection('users').updateOne(
+      { _id: new ObjectId(params.id) },
+      { $set: userData }
+    );
+    
+    if (updateResult.matchedCount === 0) {
+      return NextResponse.json({ 
+        error: 'Update Failed', 
+        message: 'User was not found during update' 
+      }, { status: 404 });
+    }
+    
     return NextResponse.json({ 
       success: true, 
       message: 'User updated successfully',

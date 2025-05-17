@@ -100,29 +100,31 @@ export default function DocumentList({ auditLogs, loading, refreshing, onRefresh
                         No documents with history found.
                     </p>
                 ) : (
-                    <ul className="space-y-2">
-                        {documentInfo.map(doc => (
-                            <li key={doc.id}>
-                                <Link
-                                    href={`/document/${doc.id}`}
-                                    className="block p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-200 transition-colors"
-                                >
-                                    <div className="flex flex-row gap-4">
-                                        <div>
-                                            <span className="text-sm text-gray-600 font-semibold">Document ID:</span>
-                                            <span className="text-sm text-gray-600 font-mono ml-1">{doc.id}</span>
-                                        </div>
-                                        {doc.email && (
+                    <div className="max-h-[300px] overflow-y-auto pr-2">
+                        <ul className="space-y-2">
+                            {documentInfo.map(doc => (
+                                <li key={doc.id}>
+                                    <Link
+                                        href={`/document/${doc.id}`}
+                                        className="block p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-200 transition-colors"
+                                    >
+                                        <div className="flex flex-row gap-4">
                                             <div>
-                                                <span className="text-sm text-gray-600 font-semibold">Email:</span>
-                                                <span className="text-sm text-gray-600 ml-1">{doc.email}</span>
+                                                <span className="text-sm text-gray-600 font-semibold">Document ID:</span>
+                                                <span className="text-sm text-gray-600 font-mono ml-1">{doc.id}</span>
                                             </div>
-                                        )}
-                                    </div>
-                                </Link>
-                            </li>
-                        ))}
-                    </ul>
+                                            {doc.email && (
+                                                <div>
+                                                    <span className="text-sm text-gray-600 font-semibold">Email:</span>
+                                                    <span className="text-sm text-gray-600 ml-1">{doc.email}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 )}
             </div>
         </div>
