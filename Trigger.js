@@ -122,17 +122,6 @@ exports = async function(changeEvent) {
           }
           
           if (addressChanged) {
-            if (!filteredPreImage[key]) filteredPreImage[key] = {};
-            if (!filteredPostImage[key]) filteredPostImage[key] = {};
-            
-            for (const displayField of changedAddressFields) {
-              const dbFieldName = Object.entries(addressFieldMap).find(([_, dispName]) => dispName === displayField)?.[0];
-              if (dbFieldName) {
-                filteredPreImage[key][displayField] = preImage[key][dbFieldName];
-                filteredPostImage[key][displayField] = postImage[key][dbFieldName];
-              }
-            }
-            
             continue;
           }
         }

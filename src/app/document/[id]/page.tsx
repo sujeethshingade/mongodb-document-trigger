@@ -286,11 +286,7 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                                                                                 const preValue = preAddress[addrField];
                                                                                 const postValue = postAddress[addrField];
                                                                                 const hasChanged = JSON.stringify(preValue) !== JSON.stringify(postValue);
-
-                                                                                const preValueEmpty = preValue === null || preValue === undefined || preValue === '';
-                                                                                const postValueEmpty = postValue === null || postValue === undefined || postValue === '';
-
-                                                                                return hasChanged || !preValueEmpty || !postValueEmpty;
+                                                                                return hasChanged;
                                                                             });
 
                                                                             if (filteredAddressFields.length === 0) {
