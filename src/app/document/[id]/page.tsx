@@ -102,12 +102,6 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
 
     const renderFieldValue = (value: any, isPreImage: boolean, operationType: string) => {
         if (value === null || value === undefined) {
-            if (operationType === 'insert' && isPreImage) {
-                return <span className="text-green-600 font-medium">New Document</span>;
-            }
-            if (operationType === 'delete' && !isPreImage) {
-                return <span className="text-red-600 font-medium">Document Deleted</span>;
-            }
             return <span className="text-gray-400">Empty</span>;
         }
 
@@ -138,6 +132,19 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
         return String(value);
     };
 
+    const shouldSkipField = (field: string, log: AuditLog) => {
+        const preValue = log.preImage ? log.preImage[field] : null;
+        const postValue = log.postImage ? log.postImage[field] : null;
+
+        if (log.operationType === 'insert' && (!postValue || (typeof postValue === 'object' && Object.keys(postValue).length === 0))) {
+            return true;
+        }
+        if (log.operationType === 'delete' && (!preValue || (typeof preValue === 'object' && Object.keys(preValue).length === 0))) {
+            return true;
+        }
+        return false;
+    };
+
     return (
         <div className="w-full py-6 px-4">
             <div className="bg-white shadow-md rounded-lg overflow-hidden">
@@ -164,7 +171,6 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                             </p>
                         )}
                     </div>
-
 
                     <div className="mb-4 flex justify-end">
                         <button
@@ -228,7 +234,7 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-gray-500">
                                                     <div className="flex flex-wrap gap-1">
-                                                        {log.changedFields?.map((field, idx) => (
+                                                        {log.changedFields?.filter(field => !shouldSkipField(field, log)).map((field, idx) => (
                                                             <span key={idx} className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded">
                                                                 {field.startsWith('Address.') ?
                                                                     `Address: ${field.split('.')[1]}` :
@@ -248,7 +254,7 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                                             </tr>
                                             {expandedLogs[log._id!] && (
                                                 <tr>
-                                                    <td colSpan={4} className="px-6 py-4 bg-gray-50">
+                                                    <td colSpan={4} className="px-4 py-6">
                                                         <div className="overflow-x-auto border border-gray-200 rounded-lg">
                                                             <table className="min-w-full divide-y divide-gray-200">
                                                                 <thead className="bg-gray-100">
@@ -266,6 +272,10 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                                                                 </thead>
                                                                 <tbody className="bg-white divide-y divide-gray-200">
                                                                     {log.changedFields?.map((field, idx) => {
+                                                                        if (shouldSkipField(field, log)) {
+                                                                            return null;
+                                                                        }
+
                                                                         if (field === 'Address' || field.startsWith('Address.')) {
                                                                             if (idx !== (log.changedFields || []).findIndex(f => f === 'Address' || f.startsWith('Address.'))) {
                                                                                 return null;
@@ -295,14 +305,13 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
 
                                                                             return (
                                                                                 <React.Fragment key={idx}>
-                                                                                    <tr className="bg-gray-100">
-                                                                                        <td colSpan={3} className="px-4 py-2 text-sm text-gray-600">
-                                                                                            Address
-                                                                                        </td>
-                                                                                    </tr>
                                                                                     {filteredAddressFields.map((addrField, addrIdx) => {
                                                                                         const preValue = preAddress[addrField];
                                                                                         const postValue = postAddress[addrField];
+
+                                                                                        if (shouldSkipField(`Address.${addrField}`, log)) {
+                                                                                            return null;
+                                                                                        }
 
                                                                                         return (
                                                                                             <tr key={`addr-${addrIdx}`}>
@@ -327,7 +336,7 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                                                                             const postValue = log.postImage ? log.postImage[field] : null;
 
                                                                             return (
-                                                                                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                                                <tr key={idx}>
                                                                                     <td className="px-4 py-2 text-sm font-medium text-gray-900">
                                                                                         {field}
                                                                                     </td>

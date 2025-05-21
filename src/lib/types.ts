@@ -22,7 +22,7 @@ export interface AuditLog {
   operationType: 'insert' | 'update' | 'delete';
   collectionName: string;
   documentId: string;
-  timestamp: Date;
+  timestamp: Date;  
   changedFields?: string[];
   preImage: any | null;
   postImage: any | null;
