@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {
@@ -28,7 +27,7 @@ export async function GET(request: Request) {
       .limit(limit)
       .toArray();
     
-    const response = NextResponse.json({
+    return NextResponse.json({
       data: auditLogs,
       pagination: {
         total,
@@ -37,12 +36,6 @@ export async function GET(request: Request) {
         hasMore: total > skip + limit
       }
     });
-    
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-    
-    return response;
   } catch (error) {
     console.error('Failed to fetch audit logs:', error);
     return NextResponse.json({ 
