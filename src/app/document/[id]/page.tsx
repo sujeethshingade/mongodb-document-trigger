@@ -70,10 +70,10 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
 
     const getOperationColor = (operation: string) => {
         switch (operation) {
-            case 'insert': return 'bg-green-100 text-green-800';
-            case 'update': return 'bg-blue-100 text-blue-800';
-            case 'delete': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'insert': return 'bg-green-100';
+            case 'update': return 'bg-blue-100';
+            case 'delete': return 'bg-red-100';
+            default: return 'bg-gray-100';
         }
     };
 
@@ -138,16 +138,6 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                 </div>
 
                 <div className="p-6">
-                    <div className="flex flex-row gap-4">
-                        <p className="font-mono text-sm break-all text-gray-600">
-                            <span className="font-semibold">Document ID:</span> {documentId}
-                        </p>
-                        {userEmail && (
-                            <p className="text-sm break-all text-gray-600">
-                                <span className="font-semibold">Email:</span> {userEmail}
-                            </p>
-                        )}
-                    </div>
 
                     {loading ? (
                         <div className="text-center py-4">
