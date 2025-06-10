@@ -138,7 +138,7 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                                 value={formData.name || ''}
                                 onChange={handleChange}
                                 required
-                                placeholder="Enter name"
+                                placeholder="Enter Name"
                             />
                         </div>
 
@@ -153,7 +153,7 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                                 value={formData.email || ''}
                                 onChange={handleChange}
                                 required
-                                placeholder="Enter email"
+                                placeholder="Enter Email"
                             />
                         </div>
 
@@ -167,7 +167,7 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                                 value={formData.role || ''}
                                 onChange={handleChange}
                             >
-                                <option value="">Select a role</option>
+                                <option value="">Select a Role</option>
                                 <option value="admin">Admin</option>
                                 <option value="user">User</option>
                                 <option value="guest">Guest</option>
