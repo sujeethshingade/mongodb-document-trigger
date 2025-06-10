@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FieldAuditLog } from '@/lib/types';
-import { ArrowLeft, Clock, User, FileText } from 'lucide-react';
+import { X } from 'lucide-react';
 
 export default function DocumentHistory({ params }: { params: { id: string } }) {
   const documentId = params.id;
@@ -29,7 +29,6 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
     setLoading(true);
     try {
       const params = new URLSearchParams({
-        collection: 'users', // Default to users, could be dynamic
         useFieldLogs: 'true',
         documentId: documentId,
         limit: '100',
@@ -55,7 +54,7 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
       return <span className="text-muted-foreground italic">null</span>;
     }
     if (typeof value === 'boolean') {
-      return <Badge variant={value ? 'default' : 'secondary'}>{value ? 'true' : 'false'}</Badge>;
+      return value ? 'true' : 'false';
     }
     if (typeof value === 'object') {
       return <span className="text-muted-foreground italic">Object</span>;
@@ -76,18 +75,8 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
     }).format(d);
   };
 
-  const getOperationBadge = (operation: string) => {
-    const variants = {
-      insert: 'default',
-      update: 'secondary',
-      delete: 'destructive'
-    } as const;
-
-    return (
-      <Badge variant={variants[operation as keyof typeof variants] || 'outline'}>
-        {operation.toUpperCase()}
-      </Badge>
-    );
+  const getOperationText = (operation: string) => {
+    return operation.toUpperCase();
   };
 
   const getDocumentInfo = () => {
@@ -110,90 +99,32 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
     <>
       <Navbar />
       <div className="min-h-screen bg-background">
-        {/* Header */}
         <div className="border-b bg-card">
           <div className="container mx-auto px-4 py-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href="/logs">
-                  <Button variant="outline" size="sm">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Logs
-                  </Button>
-                </Link>
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight">Document History</h1>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
                   <p className="text-muted-foreground">
                     Document ID: <span className="font-mono text-sm">{documentId}</span>
                   </p>
+                  {docInfo && (
+                    <p className="text-muted-foreground ml-4">
+                      User/Email: <span className="font-mono">{docInfo.user}</span>
+                    </p>
+                  )}
                 </div>
               </div>
+              <Link href="/logs">
+                <Button variant="ghost" size="sm">
+                  <X className="h-4 w-4" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
 
         <div className="container mx-auto px-4 py-6">
-          {/* Document Info Cards */}
-          {docInfo && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">User</p>
-                      <p className="text-sm text-muted-foreground">{docInfo.user}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Created</p>
-                      <p className="text-xs text-muted-foreground">{docInfo.created}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Last Modified</p>
-                      <p className="text-xs text-muted-foreground">{docInfo.lastModified}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Total Changes</p>
-                      <p className="text-sm text-muted-foreground">{docInfo.totalChanges}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Audit Logs Table */}
           <Card>
-            <CardHeader>
-              <CardTitle>Change History</CardTitle>
-              <CardDescription>
-                Detailed field-level changes for this document
-              </CardDescription>
-            </CardHeader>
             <CardContent className="p-0">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
@@ -212,7 +143,7 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                     <TableRow>
                       <TableHead>Operation</TableHead>
                       <TableHead>Changed Field</TableHead>
-                      <TableHead>Old Value</TableHead>
+                      <TableHead>Previous Value</TableHead>
                       <TableHead>New Value</TableHead>
                       <TableHead>Updated By</TableHead>
                       <TableHead>Timestamp</TableHead>
@@ -221,7 +152,14 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                   <TableBody>
                     {logs.map((log, index) => (
                       <TableRow key={log._id || index}>
-                        <TableCell>{getOperationBadge(log.operationType)}</TableCell>
+                        <TableCell>
+                          <span className={
+                            log.operationType === 'insert' ? 'bg-green-500 text-white rounded-md px-2 font-medium' :
+                              log.operationType === 'update' ? 'bg-amber-500 text-white rounded-md px-2 font-medium' : 'bg-red-500 text-white rounded-md px-2 font-medium'
+                          }>
+                            {getOperationText(log.operationType)}
+                          </span>
+                        </TableCell>
                         <TableCell className="font-medium">{log.changedFields}</TableCell>
                         <TableCell className="max-w-xs">
                           <div className="truncate">
@@ -238,7 +176,8 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
                           {formatDate(log.timestamp)}
                         </TableCell>
                       </TableRow>
-                    ))}                </TableBody>
+                    ))}
+                  </TableBody>
                 </Table>
               )}
             </CardContent>
