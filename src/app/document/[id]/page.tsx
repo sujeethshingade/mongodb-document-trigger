@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -78,10 +79,10 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
   const getOperationBadge = (operation: string) => {
     const variants = {
       insert: 'default',
-      update: 'secondary', 
+      update: 'secondary',
       delete: 'destructive'
     } as const;
-    
+
     return (
       <Badge variant={variants[operation as keyof typeof variants] || 'outline'}>
         {operation.toUpperCase()}
@@ -91,11 +92,11 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
 
   const getDocumentInfo = () => {
     if (logs.length === 0) return null;
-    
+
     const userInfo = logs.find(log => log.updatedBy !== 'system')?.updatedBy;
     const firstLog = logs[logs.length - 1]; // Oldest log (since sorted desc)
     const lastLog = logs[0]; // Newest log
-    
+
     return {
       user: userInfo || 'Unknown',
       created: firstLog ? formatDate(firstLog.timestamp) : 'Unknown',
@@ -105,144 +106,145 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
   };
 
   const docInfo = getDocumentInfo();
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/logs">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Logs
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Document History</h1>
-                <p className="text-muted-foreground">
-                  Document ID: <span className="font-mono text-sm">{documentId}</span>
-                </p>
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <div className="border-b bg-card">
+          <div className="container mx-auto px-4 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Link href="/logs">
+                  <Button variant="outline" size="sm">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Logs
+                  </Button>
+                </Link>
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight">Document History</h1>
+                  <p className="text-muted-foreground">
+                    Document ID: <span className="font-mono text-sm">{documentId}</span>
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Document Info Cards */}
-        {docInfo && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">User</p>
-                    <p className="text-sm text-muted-foreground">{docInfo.user}</p>
+        <div className="container mx-auto px-4 py-6">
+          {/* Document Info Cards */}
+          {docInfo && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">User</p>
+                      <p className="text-sm text-muted-foreground">{docInfo.user}</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Created</p>
-                    <p className="text-xs text-muted-foreground">{docInfo.created}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Last Modified</p>
-                    <p className="text-xs text-muted-foreground">{docInfo.lastModified}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Total Changes</p>
-                    <p className="text-sm text-muted-foreground">{docInfo.totalChanges}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                </CardContent>
+              </Card>
 
-        {/* Audit Logs Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Change History</CardTitle>
-            <CardDescription>
-              Detailed field-level changes for this document
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Loading document history...</p>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Created</p>
+                      <p className="text-xs text-muted-foreground">{docInfo.created}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Last Modified</p>
+                      <p className="text-xs text-muted-foreground">{docInfo.lastModified}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Total Changes</p>
+                      <p className="text-sm text-muted-foreground">{docInfo.totalChanges}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Audit Logs Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Change History</CardTitle>
+              <CardDescription>
+                Detailed field-level changes for this document
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading document history...</p>
+                  </div>
                 </div>
-              </div>
-            ) : logs.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No history found for this document.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Operation</TableHead>
-                    <TableHead>Changed Field</TableHead>
-                    <TableHead>Old Value</TableHead>
-                    <TableHead>New Value</TableHead>
-                    <TableHead>Updated By</TableHead>
-                    <TableHead>Timestamp</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logs.map((log, index) => (
-                    <TableRow key={log._id || index}>
-                      <TableCell>{getOperationBadge(log.operationType)}</TableCell>
-                      <TableCell className="font-medium">{log.changedFields}</TableCell>
-                      <TableCell className="max-w-xs">
-                        <div className="truncate">
-                          {formatValue(log.oldValue)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-xs">
-                        <div className="truncate">
-                          {formatValue(log.newValue)}
-                        </div>
-                      </TableCell>
-                      <TableCell>{log.updatedBy}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(log.timestamp)}
-                      </TableCell>
+              ) : logs.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No history found for this document.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Operation</TableHead>
+                      <TableHead>Changed Field</TableHead>
+                      <TableHead>Old Value</TableHead>
+                      <TableHead>New Value</TableHead>
+                      <TableHead>Updated By</TableHead>
+                      <TableHead>Timestamp</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {logs.map((log, index) => (
+                      <TableRow key={log._id || index}>
+                        <TableCell>{getOperationBadge(log.operationType)}</TableCell>
+                        <TableCell className="font-medium">{log.changedFields}</TableCell>
+                        <TableCell className="max-w-xs">
+                          <div className="truncate">
+                            {formatValue(log.oldValue)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-xs">
+                          <div className="truncate">
+                            {formatValue(log.newValue)}
+                          </div>
+                        </TableCell>
+                        <TableCell>{log.updatedBy}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(log.timestamp)}
+                        </TableCell>
+                      </TableRow>
+                    ))}                </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

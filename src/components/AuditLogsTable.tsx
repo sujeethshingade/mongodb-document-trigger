@@ -199,7 +199,7 @@ export default function AuditLogsTable({
             <div className="p-6">
                 {loading ? (
                     <div className="text-center py-4">
-                        <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600"></div>
+                        <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-muted border-t-foreground"></div>
                         <p className="mt-2 text-gray-500">Loading audit logs...</p>
                     </div>
                 ) : logs.length === 0 ? (

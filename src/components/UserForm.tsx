@@ -111,9 +111,8 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
                 <h2 className="text-xl font-medium text-gray-800">
                     {editingUser ? 'Edit User' : 'Add New User'}
-                </h2>
-                {editingUser && (
-                    <div className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full">
+                </h2>                {editingUser && (
+                    <div className="px-3 py-1 text-sm bg-secondary text-secondary-foreground rounded-full">
                         Editing User: {formData.email}
                     </div>
                 )}
@@ -131,9 +130,8 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="name">
                                 Name
-                            </label>
-                            <input
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            </label>                            <input
+                                className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                                 id="name"
                                 type="text"
                                 name="name"
@@ -147,9 +145,8 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
                                 Email
-                            </label>
-                            <input
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            </label>                            <input
+                                className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                                 id="email"
                                 type="email"
                                 name="email"
@@ -163,9 +160,8 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="role">
                                 Role
-                            </label>
-                            <select
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            </label>                            <select
+                                className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                                 id="role"
                                 name="role"
                                 value={formData.role || ''}
@@ -184,29 +180,27 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="Address.AddressLine1">
                                     Address Line 1
-                                </label>
-                                <input
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                </label>                                <input
+                                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                                     id="Address.AddressLine1"
                                     type="text"
                                     name="Address.AddressLine1"
                                     value={formData.Address?.AddressLine1 || ''}
                                     onChange={handleChange}
-                                    placeholder="House number"
+                                    placeholder="Address Line 1"
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="Address.AddressLine2">
                                     Address Line 2
-                                </label>
-                                <input
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                </label>                                <input
+                                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                                     id="Address.AddressLine2"
                                     type="text"
                                     name="Address.AddressLine2"
                                     value={formData.Address?.AddressLine2 || ''}
                                     onChange={handleChange}
-                                    placeholder="Street address"
+                                    placeholder="Address Line 2"
                                 />
                             </div>
                         </div>
@@ -215,9 +209,8 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="Address.City">
                                     City
-                                </label>
-                                <input
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                </label>                                <input
+                                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                                     id="Address.City"
                                     type="text"
                                     name="Address.City"
@@ -229,9 +222,8 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="Address.State">
                                     State
-                                </label>
-                                <input
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                </label>                                <input
+                                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                                     id="Address.State"
                                     type="text"
                                     name="Address.State"
@@ -243,9 +235,8 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="Address.Country">
                                     Country
-                                </label>
-                                <input
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                </label>                                <input
+                                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                                     id="Address.Country"
                                     type="text"
                                     name="Address.Country"
@@ -257,9 +248,8 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="Address.ZipCode">
                                     Zip Code
-                                </label>
-                                <input
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                </label>                                <input
+                                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                                     id="Address.ZipCode"
                                     type="text"
                                     name="Address.ZipCode"
@@ -272,14 +262,13 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                     </div>
 
                     <div className="pt-4 flex items-center justify-end space-x-3 border-t border-gray-100">
-                        {editingUser && (
-                            <button
-                                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                                type="button"
-                                onClick={resetForm}
-                            >
-                                Cancel
-                            </button>
+                        {editingUser && (<button
+                            className="px-4 py-2 text-sm text-muted-foreground bg-muted hover:bg-muted/80 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
+                            type="button"
+                            onClick={resetForm}
+                        >
+                            Cancel
+                        </button>
                         )}
                         <button
                             className={`px-4 py-2 text-sm text-white text-bold bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
