@@ -17,6 +17,7 @@ export interface User {
   updatedAt?: Date;
 }
 
+// Legacy audit log format (for backward compatibility)
 export interface AuditLog {
   _id?: string;
   operationType: 'insert' | 'update' | 'delete';
@@ -26,4 +27,26 @@ export interface AuditLog {
   changedFields?: string[];
   preImage: any | null;
   postImage: any | null;
+}
+
+// New field-based audit log format (one entry per changed field)
+export interface FieldAuditLog {
+  _id?: string;
+  documentId: string;
+  operationType: 'insert' | 'update' | 'delete';
+  changedFields: string;
+  oldValue: any;
+  newValue: any;
+  updatedBy: string;
+  timestamp: Date;
+}
+
+// For filtering logs
+export interface LogFilter {
+  documentId?: string;
+  operationType?: string;
+  changedFields?: string;
+  updatedBy?: string;
+  startDate?: Date;
+  endDate?: Date;
 }

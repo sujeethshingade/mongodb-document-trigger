@@ -2,265 +2,247 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { AuditLog } from '@/lib/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { FieldAuditLog } from '@/lib/types';
+import { ArrowLeft, Clock, User, FileText } from 'lucide-react';
 
 export default function DocumentHistory({ params }: { params: { id: string } }) {
-    const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [userEmail, setUserEmail] = useState<string | null>(null);
+  const documentId = params.id;
+  const [logs, setLogs] = useState<FieldAuditLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    limit: 100,
+    skip: 0,
+    hasMore: false
+  });
 
-    const documentId = params.id;
+  useEffect(() => {
+    fetchDocumentLogs();
+  }, [documentId]);
 
-    useEffect(() => {
-        fetchDocumentHistory();
-        fetchUserInfo();
-    }, []);
+  const fetchDocumentLogs = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        collection: 'users', // Default to users, could be dynamic
+        useFieldLogs: 'true',
+        documentId: documentId,
+        limit: '100',
+        sortBy: 'timestamp',
+        sortOrder: 'desc'
+      });
 
-    const fetchUserInfo = async () => {
-        try {
-            const response = await fetch(`/api/users/${documentId}`);
+      const response = await fetch(`/api/audit-logs?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch document history');
 
-            if (response.ok) {
-                const userData = await response.json();
-                if (userData && userData.email) {
-                    setUserEmail(userData.email);
-                }
-            }
-        } catch (err) {
-            console.error('Error fetching user information:', err);
-        }
-    };
+      const data = await response.json();
+      setLogs(data.data || []);
+      setPagination(data.pagination || pagination);
+    } catch (error) {
+      console.error('Error fetching document history:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const fetchDocumentHistory = async () => {
-        try {
-            const response = await fetch(`/api/audit-logs?documentId=${documentId}`);
+  const formatValue = (value: any) => {
+    if (value === null || value === undefined) {
+      return <span className="text-muted-foreground italic">null</span>;
+    }
+    if (typeof value === 'boolean') {
+      return <Badge variant={value ? 'default' : 'secondary'}>{value ? 'true' : 'false'}</Badge>;
+    }
+    if (typeof value === 'object') {
+      return <span className="text-muted-foreground italic">Object</span>;
+    }
+    const str = String(value);
+    return str.length > 100 ? (
+      <span title={str} className="cursor-help">
+        {str.substring(0, 100)}...
+      </span>
+    ) : str;
+  };
 
-            if (!response.ok) throw new Error('Failed to fetch document history');
+  const formatDate = (date: Date | string) => {
+    const d = new Date(date);
+    return new Intl.DateTimeFormat('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'medium'
+    }).format(d);
+  };
 
-            const responseData = await response.json();
-            setAuditLogs(responseData.data || []);
-
-            if (!userEmail && responseData.data && responseData.data.length > 0) {
-                const logs = responseData.data;
-                for (const log of logs) {
-                    if (log.postImage && log.postImage.email) {
-                        setUserEmail(log.postImage.email);
-                        break;
-                    } else if (log.preImage && log.preImage.email) {
-                        setUserEmail(log.preImage.email);
-                        break;
-                    }
-                }
-            }
-
-        } catch (err) {
-            console.error('Error fetching document history:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const formatDate = (dateString: string | Date) => {
-        const date = new Date(dateString);
-        return new Intl.DateTimeFormat('en-US', {
-            dateStyle: 'medium',
-            timeStyle: 'short'
-        }).format(date);
-    };
-
-    const getOperationColor = (operation: string) => {
-        switch (operation) {
-            case 'insert': return 'bg-green-100';
-            case 'update': return 'bg-blue-100';
-            case 'delete': return 'bg-red-100';
-            default: return 'bg-gray-100';
-        }
-    };
-
-    const renderFieldValue = (value: any, isPreImage: boolean, operationType: string) => {
-        if (value === null || value === undefined) {
-            return <span className="text-gray-400">Empty</span>;
-        }
-
-        if (typeof value === 'object') {
-            if (Object.keys(value).length === 0) {
-                return <span className="text-gray-400">Empty</span>;
-            }
-
-            if ('AddressLine1' in value || 'AddressLine2' in value || 'City' in value) {
-                const parts = [];
-                if (value.AddressLine1) parts.push(value.AddressLine1);
-                if (value.AddressLine2) parts.push(value.AddressLine2);
-                if (value.City) parts.push(value.City);
-                if (value.State) parts.push(value.State);
-                if (value.Country) parts.push(value.Country);
-                if (value.ZipCode) parts.push(value.ZipCode);
-
-                return parts.length > 0 ? parts.join(', ') : <span className="text-gray-400">Empty</span>;
-            }
-
-            return <span className="italic">Complex value</span>;
-        }
-
-        if (typeof value === 'boolean') {
-            return value ? 'Yes' : 'No';
-        }
-
-        return String(value);
-    };
-
-    const shouldSkipField = (field: string, log: AuditLog) => {
-        const preValue = log.preImage ? log.preImage[field] : null;
-        const postValue = log.postImage ? log.postImage[field] : null;
-
-        if (log.operationType === 'insert' && (!postValue || (typeof postValue === 'object' && Object.keys(postValue).length === 0))) {
-            return true;
-        }
-        if (log.operationType === 'delete' && (!preValue || (typeof preValue === 'object' && Object.keys(preValue).length === 0))) {
-            return true;
-        }
-        return false;
-    };
-
+  const getOperationBadge = (operation: string) => {
+    const variants = {
+      insert: 'default',
+      update: 'secondary', 
+      delete: 'destructive'
+    } as const;
+    
     return (
-        <div className="w-full py-6 px-4">
-            <div className="bg-white shadow-md rounded-lg overflow-hidden">
-                <div className="border-b border-gray-200 bg-gray-50 px-6 py-4 flex justify-between items-center">
-                    <h1 className="text-xl font-semibold text-gray-800">
-                        Document History
-                    </h1>
-                    <Link
-                        href="/"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        Back
-                    </Link>
-                </div>
-
-                <div className="p-6">
-
-                    {loading ? (
-                        <div className="text-center py-4">
-                            <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600"></div>
-                            <p className="mt-2 text-gray-500">Loading document history...</p>
-                        </div>
-                    ) : auditLogs.length === 0 ? (
-                        <p className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
-                            No history found for this document.
-                        </p>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            {auditLogs.map((log) => (
-                                <div key={log._id} className="mb-6 border border-gray-200 rounded-lg overflow-hidden">
-                                    <div className={`px-4 py-2 ${getOperationColor(log.operationType)}`}>
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-semibold">{log.operationType.toUpperCase()} - {formatDate(log.timestamp)}</span>
-                                        </div>
-                                    </div>
-                                    <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-100">
-                                            <tr>
-                                                <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Field
-                                                </th>
-                                                <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Previous Value
-                                                </th>
-                                                <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    New Value
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-white divide-y divide-gray-200">
-                                            {log.changedFields?.map((field, idx) => {
-                                                if (shouldSkipField(field, log)) {
-                                                    return null;
-                                                }
-
-                                                if (field === 'Address' || field.startsWith('Address.')) {
-                                                    if (idx !== (log.changedFields || []).findIndex(f => f === 'Address' || f.startsWith('Address.'))) {
-                                                        return null;
-                                                    }
-
-                                                    const preAddress = log.preImage && log.preImage.Address ? log.preImage.Address : {};
-                                                    const postAddress = log.postImage && log.postImage.Address ? log.postImage.Address : {};
-
-                                                    const changedAddressFields = (log.changedFields || [])
-                                                        .filter(f => f.startsWith('Address.'))
-                                                        .map(f => f.split('.')[1]);
-
-                                                    const addressFieldsToShow = changedAddressFields.length > 0 ?
-                                                        changedAddressFields :
-                                                        Array.from(new Set([...Object.keys(preAddress), ...Object.keys(postAddress)]));
-
-                                                    const filteredAddressFields = addressFieldsToShow.filter(addrField => {
-                                                        const preValue = preAddress[addrField];
-                                                        const postValue = postAddress[addrField];
-                                                        const hasChanged = JSON.stringify(preValue) !== JSON.stringify(postValue);
-                                                        return hasChanged;
-                                                    });
-
-                                                    if (filteredAddressFields.length === 0) {
-                                                        return null;
-                                                    }
-
-                                                    return (
-                                                        <React.Fragment key={idx}>
-                                                            {filteredAddressFields.map((addrField, addrIdx) => {
-                                                                const preValue = preAddress[addrField];
-                                                                const postValue = postAddress[addrField];
-
-                                                                if (shouldSkipField(`Address.${addrField}`, log)) {
-                                                                    return null;
-                                                                }
-
-                                                                return (
-                                                                    <tr key={`addr-${addrIdx}`}>
-                                                                        <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                                                                            {addrField}
-                                                                        </td>
-                                                                        <td className="px-4 py-2 text-sm text-gray-700">
-                                                                            {renderFieldValue(preValue, true, log.operationType)}
-                                                                        </td>
-                                                                        <td className="px-4 py-2 text-sm text-gray-700">
-                                                                            {renderFieldValue(postValue, false, log.operationType)}
-                                                                        </td>
-                                                                    </tr>
-                                                                );
-                                                            })}
-                                                        </React.Fragment>
-                                                    );
-                                                }
-
-                                                if (!field.startsWith('Address.')) {
-                                                    const preValue = log.preImage ? log.preImage[field] : null;
-                                                    const postValue = log.postImage ? log.postImage[field] : null;
-
-                                                    return (
-                                                        <tr key={idx}>
-                                                            <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                                                                {field}
-                                                            </td>
-                                                            <td className="px-4 py-2 text-sm text-gray-700">
-                                                                {renderFieldValue(preValue, true, log.operationType)}
-                                                            </td>
-                                                            <td className="px-4 py-2 text-sm text-gray-700">
-                                                                {renderFieldValue(postValue, false, log.operationType)}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                }
-
-                                                return null;
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
+      <Badge variant={variants[operation as keyof typeof variants] || 'outline'}>
+        {operation.toUpperCase()}
+      </Badge>
     );
+  };
+
+  const getDocumentInfo = () => {
+    if (logs.length === 0) return null;
+    
+    const userInfo = logs.find(log => log.updatedBy !== 'system')?.updatedBy;
+    const firstLog = logs[logs.length - 1]; // Oldest log (since sorted desc)
+    const lastLog = logs[0]; // Newest log
+    
+    return {
+      user: userInfo || 'Unknown',
+      created: firstLog ? formatDate(firstLog.timestamp) : 'Unknown',
+      lastModified: lastLog ? formatDate(lastLog.timestamp) : 'Unknown',
+      totalChanges: logs.length
+    };
+  };
+
+  const docInfo = getDocumentInfo();
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b bg-card">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/logs">
+                <Button variant="outline" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Logs
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Document History</h1>
+                <p className="text-muted-foreground">
+                  Document ID: <span className="font-mono text-sm">{documentId}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-6">
+        {/* Document Info Cards */}
+        {docInfo && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">User</p>
+                    <p className="text-sm text-muted-foreground">{docInfo.user}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Created</p>
+                    <p className="text-xs text-muted-foreground">{docInfo.created}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Last Modified</p>
+                    <p className="text-xs text-muted-foreground">{docInfo.lastModified}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Total Changes</p>
+                    <p className="text-sm text-muted-foreground">{docInfo.totalChanges}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Audit Logs Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Change History</CardTitle>
+            <CardDescription>
+              Detailed field-level changes for this document
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading document history...</p>
+                </div>
+              </div>
+            ) : logs.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No history found for this document.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Operation</TableHead>
+                    <TableHead>Changed Field</TableHead>
+                    <TableHead>Old Value</TableHead>
+                    <TableHead>New Value</TableHead>
+                    <TableHead>Updated By</TableHead>
+                    <TableHead>Timestamp</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {logs.map((log, index) => (
+                    <TableRow key={log._id || index}>
+                      <TableCell>{getOperationBadge(log.operationType)}</TableCell>
+                      <TableCell className="font-medium">{log.changedFields}</TableCell>
+                      <TableCell className="max-w-xs">
+                        <div className="truncate">
+                          {formatValue(log.oldValue)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-xs">
+                        <div className="truncate">
+                          {formatValue(log.newValue)}
+                        </div>
+                      </TableCell>
+                      <TableCell>{log.updatedBy}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatDate(log.timestamp)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }

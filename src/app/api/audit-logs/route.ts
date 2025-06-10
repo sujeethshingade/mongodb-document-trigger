@@ -10,31 +10,80 @@ export async function GET(request: Request) {
     
     const url = new URL(request.url);
     const documentId = url.searchParams.get('documentId');
+    const collection = url.searchParams.get('collection') || 'users'; // Default to users
+    const operationType = url.searchParams.get('operationType');
+    const changedFields = url.searchParams.get('changedFields');
+    const updatedBy = url.searchParams.get('updatedBy');
+    const startDate = url.searchParams.get('startDate');
+    const endDate = url.searchParams.get('endDate');
     const limit = parseInt(url.searchParams.get('limit') || '100', 10);
     const skip = parseInt(url.searchParams.get('skip') || '0', 10);
+    const sortBy = url.searchParams.get('sortBy') || 'timestamp';
+    const sortOrder = url.searchParams.get('sortOrder') === 'asc' ? 1 : -1;
     
+    // Determine which collection to query (new field-based logs or legacy logs)
+    const useFieldLogs = url.searchParams.get('useFieldLogs') !== 'false'; // Default to true
+    const logsCollectionName = useFieldLogs ? `${collection}_logs` : 'auditLogs';
+    
+    // Build filter
     const filter: Record<string, any> = {};
+    
     if (documentId) {
       filter.documentId = documentId;
     }
     
-    const query = db.collection('auditLogs').find(filter);
-    const total = await db.collection('auditLogs').countDocuments(filter);
+    if (operationType) {
+      filter.operationType = operationType;
+    }
     
-    const auditLogs = await query
-      .sort({ timestamp: -1 })
+    if (useFieldLogs) {
+      // For field-based logs
+      if (changedFields) {
+        filter.changedFields = new RegExp(changedFields, 'i'); // Case-insensitive search
+      }
+      
+      if (updatedBy) {
+        filter.updatedBy = new RegExp(updatedBy, 'i'); // Case-insensitive search
+      }
+    } else {
+      // For legacy logs
+      if (changedFields) {
+        filter.changedFields = { $in: [changedFields] };
+      }
+    }
+    
+    if (startDate || endDate) {
+      filter.timestamp = {};
+      if (startDate) {
+        filter.timestamp.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        filter.timestamp.$lte = new Date(endDate);
+      }
+    }
+    
+    // Get total count
+    const total = await db.collection(logsCollectionName).countDocuments(filter);
+    
+    // Get logs
+    const logs = await db
+      .collection(logsCollectionName)
+      .find(filter)
+      .sort({ [sortBy]: sortOrder })
       .skip(skip)
       .limit(limit)
       .toArray();
     
     return NextResponse.json({
-      data: auditLogs,
+      data: logs,
       pagination: {
         total,
         limit,
         skip,
         hasMore: total > skip + limit
-      }
+      },
+      collection: logsCollectionName,
+      useFieldLogs
     });
   } catch (error) {
     console.error('Failed to fetch audit logs:', error);
