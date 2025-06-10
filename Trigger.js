@@ -114,8 +114,20 @@ db.adminCommand({
             updatedBy: updatedBy,
             timestamp: timestamp
         };
-        };        // Helper function to handle nested objects dynamically
-        const processNestedObject = (fieldName, oldObj, newObj, prefix = "", isInsert = false) => {
+        };        // Helper function to check if a value is meaningful (not null, undefined, empty string, or empty object)
+        const isMeaningfulValue = (value) => {
+            if (value === null || value === undefined || value === '') return false;
+            if (typeof value === 'object' && !Array.isArray(value)) {
+                // Check if object is empty or all values are null/undefined/empty
+                const keys = Object.keys(value);
+                if (keys.length === 0) return false;
+                return keys.some(key => isMeaningfulValue(value[key]));
+            }
+            return true;
+        };
+
+        // Helper function to handle nested objects dynamically
+        const processNestedObject = (fieldName, oldObj, newObj, prefix = "", isInsert = false, isDelete = false) => {
         const oldObject = oldObj || {};
         const newObject = newObj || {};
         
@@ -129,22 +141,38 @@ db.adminCommand({
             const oldValue = oldObject[subField];
             const newValue = newObject[subField];
             
-            // For insert operations, only log meaningful values (not null, undefined, or empty)
+            // For insert operations, only log meaningful values
             if (isInsert) {
-                if (newValue !== null && newValue !== undefined && newValue !== '') {
+                if (isMeaningfulValue(newValue)) {
                     const fullFieldName = prefix ? `${prefix}.${subField}` : `${fieldName}.${subField}`;
                     
                     // Check if this is another nested object that needs further processing
                     if (typeof newValue === 'object' && newValue !== null && !Array.isArray(newValue)) {
                         // Recursively process nested objects
-                        processNestedObject(subField, null, newValue, fullFieldName, true);
+                        processNestedObject(subField, null, newValue, fullFieldName, true, false);
                     } else {
                         // Log the field change
                         logEntries.push(createLogEntry(fullFieldName, oldValue, newValue));
                     }
                 }
-            } else {
-                // For update operations, only log if there's actually a change
+            } 
+            // For delete operations, only log meaningful values that existed
+            else if (isDelete) {
+                if (isMeaningfulValue(oldValue)) {
+                    const fullFieldName = prefix ? `${prefix}.${subField}` : `${fieldName}.${subField}`;
+                    
+                    // Check if this is another nested object that needs further processing
+                    if (typeof oldValue === 'object' && oldValue !== null && !Array.isArray(oldValue)) {
+                        // Recursively process nested objects
+                        processNestedObject(subField, oldValue, null, fullFieldName, false, true);
+                    } else {
+                        // Log the field change
+                        logEntries.push(createLogEntry(fullFieldName, oldValue, null));
+                    }
+                }
+            }
+            // For update operations, only log if there's actually a change
+            else {
                 if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
                     const fullFieldName = prefix ? `${prefix}.${subField}` : `${fieldName}.${subField}`;
                     
@@ -153,7 +181,7 @@ db.adminCommand({
                         oldValue !== null && newValue !== null && 
                         !Array.isArray(oldValue) && !Array.isArray(newValue)) {
                         // Recursively process nested objects
-                        processNestedObject(subField, oldValue, newValue, fullFieldName, false);
+                        processNestedObject(subField, oldValue, newValue, fullFieldName, false, false);
                     } else {
                         // Log the field change
                         logEntries.push(createLogEntry(fullFieldName, oldValue, newValue));
@@ -170,11 +198,11 @@ db.adminCommand({
             if (excludedFields.includes(field)) continue;
             
             // Only log fields that have actual meaningful values
-            if (value !== null && value !== undefined && value !== '') {
+            if (isMeaningfulValue(value)) {
                 // Handle nested objects dynamically
                 if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
                     // Process any nested object with isInsert flag
-                    processNestedObject(field, null, value, "", true);
+                    processNestedObject(field, null, value, "", true, false);
                 } else {
                     // For primitive values and arrays
                     logEntries.push(createLogEntry(field, null, value));
@@ -201,15 +229,13 @@ db.adminCommand({
                 // Handle nested objects dynamically
                 if (typeof oldValue === 'object' && typeof newValue === 'object' &&
                     oldValue !== null && newValue !== null && 
-                    !Array.isArray(oldValue) && !Array.isArray(newValue)) {
-                    // For complex nested objects, do a deep comparison
-                    processNestedObject(field, oldValue, newValue, "", false);
-                }
-                // Handle cases where one is object and other is not (or one is null)
+                    !Array.isArray(oldValue) && !Array.isArray(newValue)) {                    // For complex nested objects, do a deep comparison
+                    processNestedObject(field, oldValue, newValue, "", false, false);
+                }                // Handle cases where one is object and other is not (or one is null)
                 else if ((typeof oldValue === 'object' && oldValue !== null && !Array.isArray(oldValue)) ||
                         (typeof newValue === 'object' && newValue !== null && !Array.isArray(newValue))) {
                     // Process as nested object (handles null to object or object to null transitions)
-                    processNestedObject(field, oldValue, newValue, "", false);
+                    processNestedObject(field, oldValue, newValue, "", false, false);
                 }
                 // Handle primitive values and arrays
                 else {
@@ -226,10 +252,10 @@ db.adminCommand({
             if (excludedFields.includes(field)) continue;
             
             // Only log fields that had meaningful values
-            if (value !== null && value !== undefined && value !== '') {
+            if (isMeaningfulValue(value)) {
                 // Handle nested objects dynamically
                 if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                    processNestedObject(field, value, null);
+                    processNestedObject(field, value, null, "", false, true);
                 } else {
                     logEntries.push(createLogEntry(field, value, null));
                 }
