@@ -3,13 +3,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import Navbar from "@/components/Navbar";
 import UserForm from "@/components/UserForm";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
-import { Eye, Users, FileText, BarChart3, Plus, Edit, Trash2 } from 'lucide-react';
+import { Users, Plus, Edit, Trash2 } from 'lucide-react';
 import { User } from '@/lib/types';
 
 export default function Home() {
@@ -145,21 +144,18 @@ export default function Home() {
                                 <Button
                                   variant="outline"
                                   size="sm"
+                                  className="text-gray-500 hover:text-gray-600"
                                   onClick={() => handleEditUser(user)}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
-                                <Link href={`/logs?documentId=${user._id}`}>
-                                  <Button variant="outline" size="sm">
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                </Link>
                                 <Button
                                   variant="outline"
                                   size="sm"
+                                  className='text-red-500 hover:text-red-600'
                                   onClick={() => handleDeleteUser(user._id!)}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-4 w-4 " />
                                 </Button>
                               </div>
                             </TableCell>

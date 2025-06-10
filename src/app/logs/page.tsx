@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,8 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FieldAuditLog } from '@/lib/types';
-import Link from 'next/link';
-import { Search, Filter, Eye, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 
 interface LogsPageProps { }
 
@@ -35,7 +35,6 @@ interface Collection {
     description: string;
 }
 
-// Documents Table Component
 function DocumentsTable({
     documents,
     selectedCollection
@@ -43,6 +42,8 @@ function DocumentsTable({
     documents: DocumentSummary[];
     selectedCollection: string;
 }) {
+    const router = useRouter();
+
     if (documents.length === 0) {
         return (
             <div className="text-center py-12">
@@ -59,19 +60,21 @@ function DocumentsTable({
                     <TableHead>User/Email</TableHead>
                     <TableHead>Last Operation</TableHead>
                     <TableHead>Last Updated</TableHead>
-                    <TableHead>Total Changes</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {documents.map((doc) => (
-                    <TableRow key={doc.documentId}>
+                    <TableRow 
+                        key={doc.documentId} 
+                        onClick={() => router.push(`/document/${doc.documentId}`)}
+                        className="cursor-pointer hover:bg-muted/50"
+                    >
                         <TableCell className="font-mono text-sm">{doc.documentId}</TableCell>
                         <TableCell>{doc.email || <span className="text-muted-foreground">Unknown</span>}</TableCell>
                         <TableCell>
-                            <Badge variant={
-                                doc.lastOperation === 'insert' ? 'default' :
-                                    doc.lastOperation === 'update' ? 'secondary' : 'destructive'
+                            <Badge className={
+                                doc.lastOperation === 'insert' ? 'bg-green-500' :
+                                doc.lastOperation === 'update' ? 'bg-amber-500' : 'bg-red-500'
                             }>
                                 {doc.lastOperation.toUpperCase()}
                             </Badge>
@@ -80,16 +83,6 @@ function DocumentsTable({
                             dateStyle: 'short',
                             timeStyle: 'medium'
                         }).format(doc.lastUpdated)}</TableCell>
-                        <TableCell>
-                            <Badge variant="outline">{doc.totalChanges}</Badge>
-                        </TableCell>
-                        <TableCell>
-                            <Link href={`/document/${doc.documentId}`}>
-                                <Button variant="ghost" size="sm">
-                                    <Eye className="h-4 w-4" />
-                                </Button>
-                            </Link>
-                        </TableCell>
                     </TableRow>
                 ))}
             </TableBody>
@@ -97,153 +90,12 @@ function DocumentsTable({
     );
 }
 
-// Logs Table Component
-function LogsTable({
-    logs,
-    onSort,
-    sortBy,
-    sortOrder,
-    getSortIcon,
-    formatValue,
-    formatDate,
-    getOperationBadge,
-    pagination,
-    onPageChange
-}: {
-    logs: FieldAuditLog[];
-    onSort: (field: string) => void;
-    sortBy: string;
-    sortOrder: string;
-    getSortIcon: (field: string) => React.ReactNode;
-    formatValue: (value: any) => React.ReactNode;
-    formatDate: (date: Date | string) => string;
-    getOperationBadge: (operation: string) => React.ReactNode;
-    pagination: PaginationInfo;
-    onPageChange: (skip: number) => void;
-}) {
-    if (logs.length === 0) {
-        return (
-            <div className="text-center py-12">
-                <p className="text-muted-foreground">No logs found matching your criteria.</p>
-            </div>
-        );
-    }
-
-    return (
-        <>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => onSort('documentId')}
-                        >
-                            <div className="flex items-center gap-2">
-                                Document ID
-                                {getSortIcon('documentId')}
-                            </div>
-                        </TableHead>
-                        <TableHead
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => onSort('operationType')}
-                        >
-                            <div className="flex items-center gap-2">
-                                Operation
-                                {getSortIcon('operationType')}
-                            </div>
-                        </TableHead>
-                        <TableHead
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => onSort('changedFields')}
-                        >
-                            <div className="flex items-center gap-2">
-                                Changed Field
-                                {getSortIcon('changedFields')}
-                            </div>
-                        </TableHead>
-                        <TableHead>Old Value</TableHead>
-                        <TableHead>New Value</TableHead>
-                        <TableHead
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => onSort('updatedBy')}
-                        >
-                            <div className="flex items-center gap-2">
-                                Updated By
-                                {getSortIcon('updatedBy')}
-                            </div>
-                        </TableHead>
-                        <TableHead
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => onSort('timestamp')}
-                        >
-                            <div className="flex items-center gap-2">
-                                Timestamp
-                                {getSortIcon('timestamp')}
-                            </div>
-                        </TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {logs.map((log, index) => (
-                        <TableRow key={log._id || index}>
-                            <TableCell className="font-mono text-sm">{log.documentId}</TableCell>
-                            <TableCell>{getOperationBadge(log.operationType)}</TableCell>
-                            <TableCell className="font-medium">{log.changedFields}</TableCell>
-                            <TableCell className="max-w-xs">{formatValue(log.oldValue)}</TableCell>
-                            <TableCell className="max-w-xs">{formatValue(log.newValue)}</TableCell>
-                            <TableCell>{log.updatedBy}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                                {formatDate(log.timestamp)}
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-
-            {/* Pagination */}
-            <div className="flex items-center justify-between px-6 py-4 border-t">
-                <div className="text-sm text-muted-foreground">
-                    Showing {pagination.skip + 1} to {Math.min(pagination.skip + pagination.limit, pagination.total)} of {pagination.total} results
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onPageChange(Math.max(0, pagination.skip - pagination.limit))}
-                        disabled={pagination.skip === 0}
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                        Previous
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onPageChange(pagination.skip + pagination.limit)}
-                        disabled={!pagination.hasMore}
-                    >
-                        Next
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
-        </>
-    );
-}
-
 export default function LogsPage({ }: LogsPageProps) {
     const [collections, setCollections] = useState<Collection[]>([]);
     const [selectedCollection, setSelectedCollection] = useState('');
     const [collectionsLoading, setCollectionsLoading] = useState(true);
-    const [viewMode, setViewMode] = useState<'documents' | 'logs'>('documents');
-    const [logs, setLogs] = useState<FieldAuditLog[]>([]);
     const [documentSummaries, setDocumentSummaries] = useState<DocumentSummary[]>([]);
     const [loading, setLoading] = useState(true);
-    const [pagination, setPagination] = useState<PaginationInfo>({
-        total: 0,
-        limit: 50,
-        skip: 0,
-        hasMore: false
-    });
 
     // Filters
     const [filters, setFilters] = useState({
@@ -253,8 +105,6 @@ export default function LogsPage({ }: LogsPageProps) {
         updatedBy: '',
         search: ''
     });
-    const [sortBy, setSortBy] = useState('timestamp');
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     // Fetch available collections
     const fetchCollections = useCallback(async () => {
@@ -289,21 +139,40 @@ export default function LogsPage({ }: LogsPageProps) {
         fetchCollections();
     }, [fetchCollections]);
 
-    // Fetch document summaries for the documents view
+    // Fetch document summaries
     const fetchDocumentSummaries = useCallback(async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams({
                 collection: selectedCollection,
                 useFieldLogs: 'true',
-                limit: '1000' // Get more to group by document
+                limit: '1000'
+            });
+            
+            // Add filters
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value && key !== 'search') {
+                    params.append(key, value);
+                }
             });
 
             const response = await fetch(`/api/audit-logs?${params}`);
             if (!response.ok) throw new Error('Failed to fetch logs');
 
             const data = await response.json();
-            const allLogs = data.data || [];
+            let allLogs = data.data || [];
+            
+            // Apply search filter if needed
+            if (filters.search) {
+                const searchLower = filters.search.toLowerCase();
+                allLogs = allLogs.filter((log: FieldAuditLog) =>
+                    log.documentId.toLowerCase().includes(searchLower) ||
+                    log.changedFields.toLowerCase().includes(searchLower) ||
+                    log.updatedBy.toLowerCase().includes(searchLower) ||
+                    (log.oldValue && String(log.oldValue).toLowerCase().includes(searchLower)) ||
+                    (log.newValue && String(log.newValue).toLowerCase().includes(searchLower))
+                );
+            }
 
             // Group logs by document ID
             const documentMap = new Map<string, DocumentSummary>();
@@ -337,195 +206,32 @@ export default function LogsPage({ }: LogsPageProps) {
         } finally {
             setLoading(false);
         }
-    }, [selectedCollection]);
-
-    // Fetch individual logs for the logs view
-    const fetchLogs = useCallback(async () => {
-        setLoading(true);
-        try {
-            const params = new URLSearchParams({
-                collection: selectedCollection,
-                useFieldLogs: 'true',
-                limit: pagination.limit.toString(),
-                skip: pagination.skip.toString(),
-                sortBy,
-                sortOrder
-            });
-
-            // Add filters
-            Object.entries(filters).forEach(([key, value]) => {
-                if (value && key !== 'search') {
-                    params.append(key, value);
-                }
-            });
-
-            const response = await fetch(`/api/audit-logs?${params}`);
-            if (!response.ok) throw new Error('Failed to fetch logs');
-
-            const data = await response.json();
-            let filteredLogs = data.data || [];
-
-            // Apply search filter on client side for better UX
-            if (filters.search) {
-                const searchLower = filters.search.toLowerCase();
-                filteredLogs = filteredLogs.filter((log: FieldAuditLog) =>
-                    log.documentId.toLowerCase().includes(searchLower) ||
-                    log.changedFields.toLowerCase().includes(searchLower) ||
-                    log.updatedBy.toLowerCase().includes(searchLower) ||
-                    (log.oldValue && String(log.oldValue).toLowerCase().includes(searchLower)) ||
-                    (log.newValue && String(log.newValue).toLowerCase().includes(searchLower))
-                );
-            }
-
-            setLogs(filteredLogs);
-            setPagination(data.pagination || pagination);
-        } catch (error) {
-            console.error('Error fetching logs:', error);
-        } finally {
-            setLoading(false);
-        }
-    }, [selectedCollection, pagination.limit, pagination.skip, filters, sortBy, sortOrder]);
+    }, [selectedCollection, filters]);
 
     useEffect(() => {
-        if (selectedCollection && (viewMode === 'documents')) {
+        if (selectedCollection) {
             fetchDocumentSummaries();
-        } else if (selectedCollection && (viewMode === 'logs')) {
-            fetchLogs();
         }
-    }, [viewMode, selectedCollection, fetchDocumentSummaries, fetchLogs]);
+    }, [selectedCollection, filters, fetchDocumentSummaries]);
 
     const handleFilterChange = (key: string, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value }));
-        setPagination(prev => ({ ...prev, skip: 0 }));
     };
 
-    const handleSort = (field: string) => {
-        if (sortBy === field) {
-            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortBy(field);
-            setSortOrder('desc');
-        }
-        setPagination(prev => ({ ...prev, skip: 0 }));
-    };
-
-    const handlePageChange = (newSkip: number) => {
-        setPagination(prev => ({ ...prev, skip: newSkip }));
-    };
-
-    const formatValue = (value: any) => {
-        if (value === null || value === undefined) {
-            return <span className="text-muted-foreground italic">null</span>;
-        }
-        if (typeof value === 'boolean') {
-            return <Badge variant={value ? 'default' : 'secondary'}>{value ? 'true' : 'false'}</Badge>;
-        }
-        if (typeof value === 'object') {
-            return <span className="text-muted-foreground italic">Object</span>;
-        }
-        const str = String(value);
-        return str.length > 50 ? (
-            <span title={str}>{str.substring(0, 50)}...</span>
-        ) : str;
-    };
-
-    const formatDate = (date: Date | string) => {
-        const d = new Date(date);
-        return new Intl.DateTimeFormat('en-US', {
-            dateStyle: 'short',
-            timeStyle: 'medium'
-        }).format(d);
-    };
-
-    const getOperationBadge = (operation: string) => {
-        const variants = {
-            insert: 'default',
-            update: 'secondary',
-            delete: 'destructive'
-        } as const;
-
-        return (
-            <Badge variant={variants[operation as keyof typeof variants] || 'outline'}>
-                {operation.toUpperCase()}
-            </Badge>
-        );
-    };
-
-    const getSortIcon = (field: string) => {
-        if (sortBy !== field) {
-            return <ArrowUpDown className="h-4 w-4 text-muted-foreground" />;
-        }
-        return (
-            <ArrowUpDown className={`h-4 w-4 ${sortOrder === 'asc' ? 'rotate-180' : ''} text-primary`} />
-        );
+    const resetFilters = () => {
+        setFilters({
+            documentId: '',
+            operationType: '',
+            changedFields: '',
+            updatedBy: '',
+            search: ''
+        });
     };
 
     return (
         <>
             <Navbar />
             <div className="min-h-screen bg-background">
-                {/* Header */}
-                <div className="border-b bg-card">
-                    <div className="container mx-auto px-4 py-6">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h1 className="text-3xl font-bold tracking-tight">Audit Logs</h1>
-                                <p className="text-muted-foreground">
-                                    Track all document changes across your collections
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <Select
-                                    value={selectedCollection}
-                                    onValueChange={setSelectedCollection}
-                                    disabled={collectionsLoading}
-                                >
-                                    <SelectTrigger className="w-[200px]">
-                                        <SelectValue placeholder={collectionsLoading ? "Loading..." : "Select collection"} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {collections.length === 0 && !collectionsLoading ? (
-                                            <SelectItem value="no-collections" disabled>
-                                                No collections found
-                                            </SelectItem>
-                                        ) : (
-                                            collections.map((collection) => (
-                                                <SelectItem key={collection.value} value={collection.value}>
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium">{collection.label}</span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {collection.description}
-                                                        </span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))
-                                        )}
-                                    </SelectContent>
-                                </Select>
-
-                                <div className="flex bg-muted rounded-lg p-1">
-                                    <Button
-                                        variant={viewMode === 'documents' ? 'default' : 'ghost'}
-                                        size="sm"
-                                        onClick={() => setViewMode('documents')}
-                                        className="rounded-md"
-                                    >
-                                        Documents
-                                    </Button>
-                                    <Button
-                                        variant={viewMode === 'logs' ? 'default' : 'ghost'}
-                                        size="sm"
-                                        onClick={() => setViewMode('logs')}
-                                        className="rounded-md"
-                                    >
-                                        All Logs
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <div className="container mx-auto px-4 py-6">
                     {/* Filters */}
                     <Card className="mb-6">
@@ -534,12 +240,32 @@ export default function LogsPage({ }: LogsPageProps) {
                                 <Filter className="h-5 w-5" />
                                 Filters & Search
                             </CardTitle>
-                            <CardDescription>
-                                Filter and search through {selectedCollection} logs
-                            </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-4">
+                                {/* Collection selector */}
+                                <Select
+                                    value={selectedCollection}
+                                    onValueChange={setSelectedCollection}
+                                    disabled={collectionsLoading}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={collectionsLoading ? "Loading..." : "Select collection"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {collections.map((collection) => (
+                                            <SelectItem key={collection.value} value={collection.value}>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{collection.label}</span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {collection.description}
+                                                    </span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -555,6 +281,7 @@ export default function LogsPage({ }: LogsPageProps) {
                                     value={filters.documentId}
                                     onChange={(e) => handleFilterChange('documentId', e.target.value)}
                                 />
+                                
                                 <Select
                                     value={filters.operationType || "all"}
                                     onValueChange={(value) => handleFilterChange('operationType', value === "all" ? "" : value)}
@@ -582,6 +309,17 @@ export default function LogsPage({ }: LogsPageProps) {
                                     onChange={(e) => handleFilterChange('updatedBy', e.target.value)}
                                 />
                             </div>
+                            
+                            {/* Reset button */}
+                            <div className="flex justify-end">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={resetFilters}
+                                    disabled={!Object.values(filters).some(val => val !== '')}
+                                >
+                                    Reset Filters
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -592,26 +330,13 @@ export default function LogsPage({ }: LogsPageProps) {
                                 <div className="flex items-center justify-center py-12">
                                     <div className="text-center">
                                         <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
-                                        <p className="text-muted-foreground">Loading {viewMode}...</p>
+                                        <p className="text-muted-foreground">Loading documents...</p>
                                     </div>
                                 </div>
-                            ) : viewMode === 'documents' ? (
+                            ) : (
                                 <DocumentsTable
                                     documents={documentSummaries}
                                     selectedCollection={selectedCollection}
-                                />
-                            ) : (
-                                <LogsTable
-                                    logs={logs}
-                                    onSort={handleSort}
-                                    sortBy={sortBy}
-                                    sortOrder={sortOrder}
-                                    getSortIcon={getSortIcon}
-                                    formatValue={formatValue}
-                                    formatDate={formatDate}
-                                    getOperationBadge={getOperationBadge}
-                                    pagination={pagination}
-                                    onPageChange={handlePageChange}
                                 />
                             )}
                         </CardContent>

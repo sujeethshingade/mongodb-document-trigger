@@ -112,7 +112,7 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                 <h2 className="text-xl font-medium text-gray-800">
                     {editingUser ? 'Edit User' : 'Add New User'}
                 </h2>                {editingUser && (
-                    <div className="px-3 py-1 text-sm bg-secondary text-secondary-foreground rounded-full">
+                    <div className="px-3 py-1 text-sm bg-blue-500 text-white rounded-full">
                         Editing User: {formData.email}
                     </div>
                 )}
@@ -263,7 +263,7 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
 
                     <div className="pt-4 flex items-center justify-end space-x-3 border-t border-gray-100">
                         {editingUser && (<button
-                            className="px-4 py-2 text-sm text-muted-foreground bg-muted hover:bg-muted/80 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
+                            className="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring transition-colors duration-200"
                             type="button"
                             onClick={resetForm}
                         >
@@ -271,7 +271,7 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                         </button>
                         )}
                         <button
-                            className={`px-4 py-2 text-sm text-white text-bold bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`px-4 py-2 text-sm text-white font-semibold bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 focus:ring-blue-500 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                             type="submit"
                             disabled={isSubmitting}
                         >
