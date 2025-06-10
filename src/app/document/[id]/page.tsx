@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { FieldAuditLog } from '@/lib/types';
 import { X } from 'lucide-react';
 
-export default function DocumentHistory({ params }: { params: { id: string } }) {
+function DocumentHistoryContent({ params }: { params: { id: string } }) {
   const documentId = params.id;
   const searchParams = useSearchParams();
   const collection = searchParams.get('collection') || 'users'; // Default to users if not specified
@@ -104,22 +104,22 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
       <div className="min-h-screen bg-background">
         <div className="border-b bg-card">
           <div className="container mx-auto px-4 py-6">
-            <div className="flex items-center justify-between">              
+            <div className="flex items-center justify-between">
               <div className="flex flex-col">
-              <div className="flex items-center gap-4">
-                <h2 className="text-2xl font-semibold">Document History</h2>
-              </div>
-              <div className="flex items-center gap-4 mt-2">
-                <p className="text-muted-foreground">
-                  Document ID: <span className="font-mono text-sm">{documentId}</span>
-                </p>
-                {docInfo && (
+                <div className="flex items-center gap-4">
+                  <h2 className="text-2xl font-semibold">Document History</h2>
+                </div>
+                <div className="flex items-center gap-4 mt-2">
                   <p className="text-muted-foreground">
-                    User/Email: <span className="font-mono">{docInfo.user}</span>
+                    Document ID: <span className="font-mono text-sm">{documentId}</span>
                   </p>
-                )}
+                  {docInfo && (
+                    <p className="text-muted-foreground">
+                      User/Email: <span className="font-mono">{docInfo.user}</span>
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
               <div className="flex items-center gap-2">
                 <Link href={`/logs?collection=${collection}`}>
                   <Button variant="ghost" size="sm">
@@ -193,5 +193,25 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
         </div>
       </div>
     </>
+  );
+}
+
+export default function DocumentHistory({ params }: { params: { id: string } }) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <DocumentHistoryContent params={params} />
+    </Suspense>
   );
 }

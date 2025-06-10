@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -89,7 +89,7 @@ function DocumentsTable({
     );
 }
 
-export default function LogsPage({ }: LogsPageProps) {
+function LogsPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const urlCollection = searchParams.get('collection'); // Get collection from URL
@@ -317,5 +317,25 @@ export default function LogsPage({ }: LogsPageProps) {
                 </div>
             </div>
         </>
+    );
+}
+
+export default function LogsPage({ }: LogsPageProps) {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-background">
+                <Navbar />
+                <div className="container mx-auto px-4 py-6">
+                    <div className="flex items-center justify-center py-12">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
+                            <p className="text-muted-foreground">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }>
+            <LogsPageContent />
+        </Suspense>
     );
 }
