@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -63,27 +63,26 @@ function DocumentsTable({
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {documents.map((doc) => (
-                    <TableRow 
-                        key={doc.documentId} 
-                        onClick={() => router.push(`/document/${doc.documentId}`)}
-                        className="cursor-pointer hover:bg-muted/50"
-                    >
-                        <TableCell className="font-mono text-sm">{doc.documentId}</TableCell>
-                        <TableCell>{doc.email || <span className="text-muted-foreground">Unknown</span>}</TableCell>
-                        <TableCell>
-                            <Badge className={
-                                doc.lastOperation === 'insert' ? 'bg-green-500' :
+                {documents.map((doc) => (<TableRow
+                    key={doc.documentId}
+                    onClick={() => router.push(`/document/${doc.documentId}?collection=${selectedCollection}`)}
+                    className="cursor-pointer hover:bg-muted/50"
+                >
+                    <TableCell className="font-mono text-sm">{doc.documentId}</TableCell>
+                    <TableCell>{doc.email || <span className="text-muted-foreground">Unknown</span>}</TableCell>
+                    <TableCell>
+                        <Badge className={
+                            doc.lastOperation === 'insert' ? 'bg-green-500' :
                                 doc.lastOperation === 'update' ? 'bg-amber-500' : 'bg-red-500'
-                            }>
-                                {doc.lastOperation.toUpperCase()}
-                            </Badge>
-                        </TableCell>
-                        <TableCell>{new Intl.DateTimeFormat('en-US', {
-                            dateStyle: 'short',
-                            timeStyle: 'medium'
-                        }).format(doc.lastUpdated)}</TableCell>
-                    </TableRow>
+                        }>
+                            {doc.lastOperation.toUpperCase()}
+                        </Badge>
+                    </TableCell>
+                    <TableCell>{new Intl.DateTimeFormat('en-US', {
+                        dateStyle: 'short',
+                        timeStyle: 'medium'
+                    }).format(doc.lastUpdated)}</TableCell>
+                </TableRow>
                 ))}
             </TableBody>
         </Table>
@@ -91,22 +90,20 @@ function DocumentsTable({
 }
 
 export default function LogsPage({ }: LogsPageProps) {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const urlCollection = searchParams.get('collection'); // Get collection from URL
+
     const [collections, setCollections] = useState<Collection[]>([]);
-    const [selectedCollection, setSelectedCollection] = useState('');
+    const [selectedCollection, setSelectedCollection] = useState(urlCollection || '');
     const [collectionsLoading, setCollectionsLoading] = useState(true);
     const [documentSummaries, setDocumentSummaries] = useState<DocumentSummary[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    // Filters
+    const [loading, setLoading] = useState(true);    // Filters (removed operationType and updatedBy)
     const [filters, setFilters] = useState({
         documentId: '',
-        operationType: '',
         changedFields: '',
-        updatedBy: '',
         search: ''
-    });
-
-    // Fetch available collections
+    });// Fetch available collections
     const fetchCollections = useCallback(async () => {
         setCollectionsLoading(true);
         try {
@@ -114,11 +111,15 @@ export default function LogsPage({ }: LogsPageProps) {
             if (!response.ok) throw new Error('Failed to fetch collections');
 
             const data = await response.json();
-            setCollections(data.collections || []);
-
-            // Set the first collection as default if none is selected
-            if (data.collections && data.collections.length > 0 && !selectedCollection) {
-                setSelectedCollection(data.collections[0].value);
+            setCollections(data.collections || []);            // Set collection from URL or first available collection
+            if (data.collections && data.collections.length > 0) {
+                if (urlCollection && data.collections.find((c: Collection) => c.value === urlCollection)) {
+                    // Use URL collection if it exists in the list
+                    setSelectedCollection(urlCollection);
+                } else if (!selectedCollection) {
+                    // Use first collection as default
+                    setSelectedCollection(data.collections[0].value);
+                }
             }
         } catch (error) {
             console.error('Error fetching collections:', error);
@@ -128,12 +129,13 @@ export default function LogsPage({ }: LogsPageProps) {
             ];
             setCollections(fallbackCollections);
             if (!selectedCollection) {
-                setSelectedCollection('users');
+                const defaultCollection = urlCollection || 'users';
+                setSelectedCollection(defaultCollection);
             }
         } finally {
             setCollectionsLoading(false);
         }
-    }, [selectedCollection]);
+    }, [urlCollection, selectedCollection]);
 
     useEffect(() => {
         fetchCollections();
@@ -148,7 +150,7 @@ export default function LogsPage({ }: LogsPageProps) {
                 useFieldLogs: 'true',
                 limit: '1000'
             });
-            
+
             // Add filters
             Object.entries(filters).forEach(([key, value]) => {
                 if (value && key !== 'search') {
@@ -160,15 +162,12 @@ export default function LogsPage({ }: LogsPageProps) {
             if (!response.ok) throw new Error('Failed to fetch logs');
 
             const data = await response.json();
-            let allLogs = data.data || [];
-            
-            // Apply search filter if needed
+            let allLogs = data.data || [];            // Apply search filter if needed
             if (filters.search) {
                 const searchLower = filters.search.toLowerCase();
                 allLogs = allLogs.filter((log: FieldAuditLog) =>
                     log.documentId.toLowerCase().includes(searchLower) ||
                     log.changedFields.toLowerCase().includes(searchLower) ||
-                    log.updatedBy.toLowerCase().includes(searchLower) ||
                     (log.oldValue && String(log.oldValue).toLowerCase().includes(searchLower)) ||
                     (log.newValue && String(log.newValue).toLowerCase().includes(searchLower))
                 );
@@ -216,14 +215,10 @@ export default function LogsPage({ }: LogsPageProps) {
 
     const handleFilterChange = (key: string, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value }));
-    };
-
-    const resetFilters = () => {
+    }; const resetFilters = () => {
         setFilters({
             documentId: '',
-            operationType: '',
             changedFields: '',
-            updatedBy: '',
             search: ''
         });
     };
@@ -232,24 +227,17 @@ export default function LogsPage({ }: LogsPageProps) {
         <>
             <Navbar />
             <div className="min-h-screen bg-background">
-                <div className="container mx-auto px-4 py-6">
-                    {/* Filters */}
+                <div className="container mx-auto px-4 py-6">                    {/* Collection Selection */}
                     <Card className="mb-6">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Filter className="h-5 w-5" />
-                                Filters & Search
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-4">
-                                {/* Collection selector */}
+                            <div className="flex items-center justify-end gap-2">
+                                <span className="text-base font-medium">Select Collection:</span>
                                 <Select
                                     value={selectedCollection}
                                     onValueChange={setSelectedCollection}
                                     disabled={collectionsLoading}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="w-[200px]">
                                         <SelectValue placeholder={collectionsLoading ? "Loading..." : "Select collection"} />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -257,15 +245,16 @@ export default function LogsPage({ }: LogsPageProps) {
                                             <SelectItem key={collection.value} value={collection.value}>
                                                 <div className="flex flex-col">
                                                     <span className="font-medium">{collection.label}</span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {collection.description}
-                                                    </span>
                                                 </div>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                
+                            </div>
+                            <CardTitle className="text-lg">Search & Filter Documents</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -281,39 +270,16 @@ export default function LogsPage({ }: LogsPageProps) {
                                     value={filters.documentId}
                                     onChange={(e) => handleFilterChange('documentId', e.target.value)}
                                 />
-                                
-                                <Select
-                                    value={filters.operationType || "all"}
-                                    onValueChange={(value) => handleFilterChange('operationType', value === "all" ? "" : value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Operation Type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Operations</SelectItem>
-                                        <SelectItem value="insert">Insert</SelectItem>
-                                        <SelectItem value="update">Update</SelectItem>
-                                        <SelectItem value="delete">Delete</SelectItem>
-                                    </SelectContent>
-                                </Select>
 
                                 <Input
                                     placeholder="Changed Field"
                                     value={filters.changedFields}
                                     onChange={(e) => handleFilterChange('changedFields', e.target.value)}
                                 />
-
-                                <Input
-                                    placeholder="Updated By"
-                                    value={filters.updatedBy}
-                                    onChange={(e) => handleFilterChange('updatedBy', e.target.value)}
-                                />
                             </div>
-                            
-                            {/* Reset button */}
-                            <div className="flex justify-end">
-                                <Button 
-                                    variant="outline" 
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
                                     onClick={resetFilters}
                                     disabled={!Object.values(filters).some(val => val !== '')}
                                 >

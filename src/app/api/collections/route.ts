@@ -10,8 +10,7 @@ export async function GET() {
     
     // Get all collections
     const collections = await db.listCollections().toArray();
-    
-    // Filter out collections that end with '_logs' and system collections
+      // Filter out collections that end with '_logs' and system collections
     const filteredCollections = collections
       .filter(col => 
         !col.name.endsWith('_logs') && 
@@ -21,6 +20,7 @@ export async function GET() {
       .map(col => ({
         value: col.name,
         label: col.name.charAt(0).toUpperCase() + col.name.slice(1), // Capitalize first letter
+        description: `${col.name} collection data` // Generic description
       }))
       .sort((a, b) => a.label.localeCompare(b.label)); // Sort alphabetically
 

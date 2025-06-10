@@ -70,10 +70,7 @@ export async function POST(request: Request) {
         error: 'Validation error',
         message: 'A user with this email already exists' 
       }, { status: 409 });
-    }
-    
-    userData.createdAt = new Date();
-    userData.updatedAt = new Date();
+    }    
 
     if (!userData.role) {
       userData.role = null;

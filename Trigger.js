@@ -98,9 +98,10 @@ db.adminCommand({
         } catch (e) {
         console.log("Error determining updatedBy:", e.message);
         }
-        
-        const timestamp = new Date();
+          const timestamp = new Date();
         const logEntries = [];
+          // Fields to exclude from audit logging
+        const excludedFields = ['_id', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy', '__v'];
         
         // Helper function to create log entry
         const createLogEntry = (fieldName, oldValue, newValue) => {
@@ -113,9 +114,7 @@ db.adminCommand({
             updatedBy: updatedBy,
             timestamp: timestamp
         };
-        };
-        
-        // Helper function to handle nested objects (like Address)
+        };        // Helper function to handle nested objects dynamically
         const processNestedObject = (fieldName, oldObj, newObj, prefix = "") => {
         const oldObject = oldObj || {};
         const newObject = newObj || {};
@@ -124,40 +123,50 @@ db.adminCommand({
         const allFields = new Set([...Object.keys(oldObject), ...Object.keys(newObject)]);
         
         for (const subField of allFields) {
+            // Skip excluded fields in nested objects too
+            if (excludedFields.includes(subField)) continue;
+            
             const oldValue = oldObject[subField];
             const newValue = newObject[subField];
             
             // Only log if there's actually a change
             if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
-            const fullFieldName = prefix ? `${prefix}.${subField}` : subField;
-            logEntries.push(createLogEntry(fullFieldName, oldValue, newValue));
+                const fullFieldName = prefix ? `${prefix}.${subField}` : `${fieldName}.${subField}`;
+                
+                // Check if this is another nested object that needs further processing
+                if (typeof oldValue === 'object' && typeof newValue === 'object' &&
+                    oldValue !== null && newValue !== null && 
+                    !Array.isArray(oldValue) && !Array.isArray(newValue)) {
+                    // Recursively process nested objects
+                    processNestedObject(subField, oldValue, newValue, fullFieldName);
+                } else {
+                    // Log the field change
+                    logEntries.push(createLogEntry(fullFieldName, oldValue, newValue));
+                }
             }
         }
-        };
-        
-        // Process different operation types
+        };        // Process different operation types
         if (operationType === "insert") {
         const postImage = changeEvent.fullDocument;
         if (postImage) {
             for (const [field, value] of Object.entries(postImage)) {
-            if (field === '_id') continue;
+            // Skip excluded fields
+            if (excludedFields.includes(field)) continue;
             
-            // Handle nested objects
-            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                // Special handling for Address and other nested objects
-                if (field === 'Address') {
-                processNestedObject(field, null, value);
+            // Only log fields that have actual meaningful values
+            if (value !== null && value !== undefined && value !== '') {
+                // Handle nested objects dynamically
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    // Process any nested object
+                    processNestedObject(field, null, value);
                 } else {
-                // For other nested objects, log as a single field change
-                logEntries.push(createLogEntry(field, null, value));
+                    // For primitive values and arrays
+                    logEntries.push(createLogEntry(field, null, value));
                 }
-            } else if (value !== null && value !== undefined && value !== '') {
-                logEntries.push(createLogEntry(field, null, value));
             }
             }
         }
-        } 
-        else if (operationType === "update" || operationType === "replace") {
+        }        else if (operationType === "update" || operationType === "replace") {
         const preImage = changeEvent.fullDocumentBeforeChange;
         const postImage = changeEvent.fullDocument;
         
@@ -166,43 +175,49 @@ db.adminCommand({
             const allFields = new Set([...Object.keys(preImage), ...Object.keys(postImage)]);
             
             for (const field of allFields) {
-            if (field === '_id') continue;
+            // Skip excluded fields
+            if (excludedFields.includes(field)) continue;
             
             const oldValue = preImage[field];
             const newValue = postImage[field];
             
-            // Handle nested objects specially
-            if (field === 'Address' && 
-                (typeof oldValue === 'object' || typeof newValue === 'object')) {
-                processNestedObject(field, oldValue, newValue);
-            } 
-            // Handle other nested objects
-            else if (typeof oldValue === 'object' && typeof newValue === 'object' &&
+            // Only log if there's actually a change
+            if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+                // Handle nested objects dynamically
+                if (typeof oldValue === 'object' && typeof newValue === 'object' &&
                     oldValue !== null && newValue !== null && 
                     !Array.isArray(oldValue) && !Array.isArray(newValue)) {
-                // For complex nested objects, do a deep comparison
-                if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
-                processNestedObject(field, oldValue, newValue, field);
+                    // For complex nested objects, do a deep comparison
+                    processNestedObject(field, oldValue, newValue);
                 }
-            }
-            // Handle primitive values and arrays
-            else if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
-                logEntries.push(createLogEntry(field, oldValue, newValue));
+                // Handle cases where one is object and other is not (or one is null)
+                else if ((typeof oldValue === 'object' && oldValue !== null && !Array.isArray(oldValue)) ||
+                        (typeof newValue === 'object' && newValue !== null && !Array.isArray(newValue))) {
+                    // Process as nested object (handles null to object or object to null transitions)
+                    processNestedObject(field, oldValue, newValue);
+                }
+                // Handle primitive values and arrays
+                else {
+                    logEntries.push(createLogEntry(field, oldValue, newValue));
+                }
             }
             }
         }
-        } 
-        else if (operationType === "delete") {
+        }        else if (operationType === "delete") {
         const preImage = changeEvent.fullDocumentBeforeChange;
         if (preImage) {
             for (const [field, value] of Object.entries(preImage)) {
-            if (field === '_id') continue;
+            // Skip excluded fields
+            if (excludedFields.includes(field)) continue;
             
-            // Handle nested objects
-            if (field === 'Address' && typeof value === 'object' && value !== null) {
-                processNestedObject(field, value, null);
-            } else if (value !== null && value !== undefined && value !== '') {
-                logEntries.push(createLogEntry(field, value, null));
+            // Only log fields that had meaningful values
+            if (value !== null && value !== undefined && value !== '') {
+                // Handle nested objects dynamically
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    processNestedObject(field, value, null);
+                } else {
+                    logEntries.push(createLogEntry(field, value, null));
+                }
             }
             }
         }

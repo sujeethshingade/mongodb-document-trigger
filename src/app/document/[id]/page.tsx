@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,9 @@ import { X } from 'lucide-react';
 
 export default function DocumentHistory({ params }: { params: { id: string } }) {
   const documentId = params.id;
+  const searchParams = useSearchParams();
+  const collection = searchParams.get('collection') || 'users'; // Default to users if not specified
+
   const [logs, setLogs] = useState<FieldAuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
@@ -20,15 +24,15 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
     skip: 0,
     hasMore: false
   });
-
   useEffect(() => {
     fetchDocumentLogs();
-  }, [documentId]);
+  }, [documentId, collection]); // Add collection to dependencies
 
   const fetchDocumentLogs = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
+        collection: collection, // Use the collection from URL params
         useFieldLogs: 'true',
         documentId: documentId,
         limit: '100',
@@ -101,24 +105,29 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
       <div className="min-h-screen bg-background">
         <div className="border-b bg-card">
           <div className="container mx-auto px-4 py-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">              
               <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <p className="text-muted-foreground">
-                    Document ID: <span className="font-mono text-sm">{documentId}</span>
-                  </p>
-                  {docInfo && (
-                    <p className="text-muted-foreground ml-4">
-                      User/Email: <span className="font-mono">{docInfo.user}</span>
-                    </p>
-                  )}
-                </div>
+              <div className="flex items-center gap-4">
+                <h2 className="text-2xl font-semibold">Document History</h2>
               </div>
-              <Link href="/logs">
-                <Button variant="ghost" size="sm">
-                  <X className="h-4 w-4" />
-                </Button>
-              </Link>
+              <div className="flex items-center gap-4 mt-2">
+                <p className="text-muted-foreground">
+                  Document ID: <span className="font-mono text-sm">{documentId}</span>
+                </p>
+                {docInfo && (
+                  <p className="text-muted-foreground">
+                    User/Email: <span className="font-mono">{docInfo.user}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+              <div className="flex items-center gap-2">
+                <Link href={`/logs?collection=${collection}`}>
+                  <Button variant="ghost" size="sm">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>

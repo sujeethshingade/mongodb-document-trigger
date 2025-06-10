@@ -80,7 +80,7 @@ export default function Navbar() {
                             className="flex items-center"
                         >
                             <Github className="h-4 w-4" />
-                            <span className="hidden sm:inline px-1">GitHub</span>
+                            <span className="hidden sm:inline px-1">GitHub Repository</span>
                         </a>
                     </Button>
                 </div>
