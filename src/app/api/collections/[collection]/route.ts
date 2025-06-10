@@ -77,6 +77,35 @@ export async function POST(request: Request, { params }: { params: { collection:
       }, { status: 400 });
     }
     
+    // Collection-specific validation
+    if (collection === 'users') {
+      // Validate required fields for users
+      if (!documentData.name || !documentData.email) {
+        return NextResponse.json({ 
+          error: 'Validation error',
+          message: 'Name and email are required fields' 
+        }, { status: 400 });
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(documentData.email)) {
+        return NextResponse.json({ 
+          error: 'Validation error',
+          message: 'Invalid email format' 
+        }, { status: 400 });
+      }
+      
+      // Check for duplicate email
+      const existingUser = await db.collection('users').findOne({ email: documentData.email });
+      if (existingUser) {
+        return NextResponse.json({ 
+          error: 'Validation error',
+          message: 'A user with this email already exists' 
+        }, { status: 409 });
+      }
+    }
+    
     // Add timestamps if they don't exist
     const now = new Date();
     if (!documentData.createdAt) {
@@ -85,6 +114,13 @@ export async function POST(request: Request, { params }: { params: { collection:
     if (!documentData.updatedAt) {
       documentData.updatedAt = now;
     }
+
+    // Remove undefined/null fields to avoid unnecessary audit logs
+    Object.keys(documentData).forEach(key => {
+      if (documentData[key] === undefined || documentData[key] === null) {
+        delete documentData[key];
+      }
+    });
 
     const result = await db.collection(collection).insertOne(documentData);
 

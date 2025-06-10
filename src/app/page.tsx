@@ -16,10 +16,9 @@ export default function Home() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('create');
-
   const fetchUsers = useCallback(async () => {
     try {
-      const response = await fetch('/api/users');
+      const response = await fetch('/api/collections/users');
       if (!response.ok) throw new Error('Failed to fetch users');
       const data = await response.json();
       setUsers(data.data || []);
@@ -51,7 +50,7 @@ export default function Home() {
     }
 
     try {
-      const response = await fetch(`/api/users/${userId}`, {
+      const response = await fetch(`/api/collections/users/${userId}`, {
         method: 'DELETE',
       });
 

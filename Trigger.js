@@ -115,7 +115,7 @@ db.adminCommand({
             timestamp: timestamp
         };
         };        // Helper function to handle nested objects dynamically
-        const processNestedObject = (fieldName, oldObj, newObj, prefix = "") => {
+        const processNestedObject = (fieldName, oldObj, newObj, prefix = "", isInsert = false) => {
         const oldObject = oldObj || {};
         const newObject = newObj || {};
         
@@ -129,19 +129,35 @@ db.adminCommand({
             const oldValue = oldObject[subField];
             const newValue = newObject[subField];
             
-            // Only log if there's actually a change
-            if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
-                const fullFieldName = prefix ? `${prefix}.${subField}` : `${fieldName}.${subField}`;
-                
-                // Check if this is another nested object that needs further processing
-                if (typeof oldValue === 'object' && typeof newValue === 'object' &&
-                    oldValue !== null && newValue !== null && 
-                    !Array.isArray(oldValue) && !Array.isArray(newValue)) {
-                    // Recursively process nested objects
-                    processNestedObject(subField, oldValue, newValue, fullFieldName);
-                } else {
-                    // Log the field change
-                    logEntries.push(createLogEntry(fullFieldName, oldValue, newValue));
+            // For insert operations, only log meaningful values (not null, undefined, or empty)
+            if (isInsert) {
+                if (newValue !== null && newValue !== undefined && newValue !== '') {
+                    const fullFieldName = prefix ? `${prefix}.${subField}` : `${fieldName}.${subField}`;
+                    
+                    // Check if this is another nested object that needs further processing
+                    if (typeof newValue === 'object' && newValue !== null && !Array.isArray(newValue)) {
+                        // Recursively process nested objects
+                        processNestedObject(subField, null, newValue, fullFieldName, true);
+                    } else {
+                        // Log the field change
+                        logEntries.push(createLogEntry(fullFieldName, oldValue, newValue));
+                    }
+                }
+            } else {
+                // For update operations, only log if there's actually a change
+                if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+                    const fullFieldName = prefix ? `${prefix}.${subField}` : `${fieldName}.${subField}`;
+                    
+                    // Check if this is another nested object that needs further processing
+                    if (typeof oldValue === 'object' && typeof newValue === 'object' &&
+                        oldValue !== null && newValue !== null && 
+                        !Array.isArray(oldValue) && !Array.isArray(newValue)) {
+                        // Recursively process nested objects
+                        processNestedObject(subField, oldValue, newValue, fullFieldName, false);
+                    } else {
+                        // Log the field change
+                        logEntries.push(createLogEntry(fullFieldName, oldValue, newValue));
+                    }
                 }
             }
         }
@@ -157,8 +173,8 @@ db.adminCommand({
             if (value !== null && value !== undefined && value !== '') {
                 // Handle nested objects dynamically
                 if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                    // Process any nested object
-                    processNestedObject(field, null, value);
+                    // Process any nested object with isInsert flag
+                    processNestedObject(field, null, value, "", true);
                 } else {
                     // For primitive values and arrays
                     logEntries.push(createLogEntry(field, null, value));
@@ -166,7 +182,7 @@ db.adminCommand({
             }
             }
         }
-        }        else if (operationType === "update" || operationType === "replace") {
+        }else if (operationType === "update" || operationType === "replace") {
         const preImage = changeEvent.fullDocumentBeforeChange;
         const postImage = changeEvent.fullDocument;
         
@@ -180,21 +196,20 @@ db.adminCommand({
             
             const oldValue = preImage[field];
             const newValue = postImage[field];
-            
-            // Only log if there's actually a change
+              // Only log if there's actually a change
             if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
                 // Handle nested objects dynamically
                 if (typeof oldValue === 'object' && typeof newValue === 'object' &&
                     oldValue !== null && newValue !== null && 
                     !Array.isArray(oldValue) && !Array.isArray(newValue)) {
                     // For complex nested objects, do a deep comparison
-                    processNestedObject(field, oldValue, newValue);
+                    processNestedObject(field, oldValue, newValue, "", false);
                 }
                 // Handle cases where one is object and other is not (or one is null)
                 else if ((typeof oldValue === 'object' && oldValue !== null && !Array.isArray(oldValue)) ||
                         (typeof newValue === 'object' && newValue !== null && !Array.isArray(newValue))) {
                     // Process as nested object (handles null to object or object to null transitions)
-                    processNestedObject(field, oldValue, newValue);
+                    processNestedObject(field, oldValue, newValue, "", false);
                 }
                 // Handle primitive values and arrays
                 else {

@@ -61,24 +61,27 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                 [name]: value === "" ? null : value,
             });
         }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    }; const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         setError('');
 
         try {
             const isEditing = !!editingUser;
-            const url = isEditing ? `/api/users/${editingUser}` : '/api/users';
+            const url = isEditing ? `/api/collections/users/${editingUser}` : '/api/collections/users';
             const method = isEditing ? 'PUT' : 'POST';
+
+            // Remove null/undefined fields to prevent unnecessary audit logs
+            const cleanFormData = Object.fromEntries(
+                Object.entries(formData).filter(([_, value]) => value !== null && value !== undefined && value !== '')
+            );
 
             const response = await fetch(url, {
                 method,
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(cleanFormData),
             });
 
             if (!response.ok) {

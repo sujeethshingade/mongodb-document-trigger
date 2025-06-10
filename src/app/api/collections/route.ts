@@ -7,22 +7,19 @@ export async function GET() {
   try {
     const client = await clientPromise;
     const db = client.db('test');
-    
-    // Get all collections
+      // Get all collections
     const collections = await db.listCollections().toArray();
       // Filter out collections that end with '_logs' and system collections
     const filteredCollections = collections
       .filter(col => 
         !col.name.endsWith('_logs') && 
-        !col.name.startsWith('system.') &&
-        col.name !== 'auditLogs' // Also exclude the legacy audit logs collection
+        !col.name.startsWith('system.')
       )
       .map(col => ({
         value: col.name,
         label: col.name.charAt(0).toUpperCase() + col.name.slice(1), // Capitalize first letter
         description: `${col.name} collection data` // Generic description
       }))
-      .sort((a, b) => a.label.localeCompare(b.label)); // Sort alphabetically
 
     return NextResponse.json({
       collections: filteredCollections

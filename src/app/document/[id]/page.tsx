@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FieldAuditLog } from '@/lib/types';
@@ -40,7 +39,7 @@ export default function DocumentHistory({ params }: { params: { id: string } }) 
         sortOrder: 'desc'
       });
 
-      const response = await fetch(`/api/audit-logs?${params}`);
+      const response = await fetch(`/api/logs?${params}`);
       if (!response.ok) throw new Error('Failed to fetch document history');
 
       const data = await response.json();

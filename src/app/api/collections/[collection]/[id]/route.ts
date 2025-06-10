@@ -73,11 +73,63 @@ export async function PUT(request: Request, { params }: { params: { collection: 
       }, { status: 400 });
     }
 
+    // Collection-specific validation
+    if (collection === 'users') {
+      // Check if document exists first
+      const existingUser = await db.collection('users').findOne({
+        _id: new ObjectId(id)
+      });
+      
+      if (!existingUser) {
+        return NextResponse.json({ 
+          error: 'Not Found', 
+          message: 'User not found' 
+        }, { status: 404 });
+      }
+
+      // Validate required fields for users
+      if (!updateData.name || !updateData.email) {
+        return NextResponse.json({ 
+          error: 'Validation Error', 
+          message: 'Name and email are required fields' 
+        }, { status: 400 });
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(updateData.email)) {
+        return NextResponse.json({ 
+          error: 'Validation Error', 
+          message: 'Invalid email format' 
+        }, { status: 400 });
+      }
+      
+      // Check for duplicate email (excluding current user)
+      const duplicateEmail = await db.collection('users').findOne({
+        _id: { $ne: new ObjectId(id) },
+        email: updateData.email
+      });
+      
+      if (duplicateEmail) {
+        return NextResponse.json({ 
+          error: 'Validation Error', 
+          message: 'A different user with this email already exists' 
+        }, { status: 409 });
+      }
+    }
+
     // Remove _id from update data if present
     delete updateData._id;
     
     // Add/update timestamp
     updateData.updatedAt = new Date();
+
+    // Remove undefined/null fields to avoid unnecessary audit logs
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined || updateData[key] === null) {
+        delete updateData[key];
+      }
+    });
 
     const result = await db.collection(collection).findOneAndUpdate(
       { _id: new ObjectId(id) },

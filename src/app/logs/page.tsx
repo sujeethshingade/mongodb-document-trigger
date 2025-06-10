@@ -103,7 +103,7 @@ export default function LogsPage({ }: LogsPageProps) {
         documentId: '',
         changedFields: '',
         search: ''
-    });// Fetch available collections
+    });    // Fetch available collections
     const fetchCollections = useCallback(async () => {
         setCollectionsLoading(true);
         try {
@@ -111,15 +111,22 @@ export default function LogsPage({ }: LogsPageProps) {
             if (!response.ok) throw new Error('Failed to fetch collections');
 
             const data = await response.json();
-            setCollections(data.collections || []);            // Set collection from URL or first available collection
+            setCollections(data.collections || []);
+
+            // Only set collection if we don't have one selected yet
             if (data.collections && data.collections.length > 0) {
-                if (urlCollection && data.collections.find((c: Collection) => c.value === urlCollection)) {
-                    // Use URL collection if it exists in the list
-                    setSelectedCollection(urlCollection);
-                } else if (!selectedCollection) {
-                    // Use first collection as default
-                    setSelectedCollection(data.collections[0].value);
-                }
+                setSelectedCollection(prev => {
+                    // If we already have a selection, keep it
+                    if (prev) return prev;
+
+                    // Check if URL collection exists in the list
+                    if (urlCollection && data.collections.find((c: Collection) => c.value === urlCollection)) {
+                        return urlCollection;
+                    }
+
+                    // Default to first collection
+                    return data.collections[0].value;
+                });
             }
         } catch (error) {
             console.error('Error fetching collections:', error);
@@ -128,14 +135,14 @@ export default function LogsPage({ }: LogsPageProps) {
                 { value: 'users', label: 'Users', description: 'User account data' }
             ];
             setCollections(fallbackCollections);
-            if (!selectedCollection) {
-                const defaultCollection = urlCollection || 'users';
-                setSelectedCollection(defaultCollection);
-            }
+            setSelectedCollection(prev => {
+                if (prev) return prev;
+                return urlCollection || 'users';
+            });
         } finally {
             setCollectionsLoading(false);
         }
-    }, [urlCollection, selectedCollection]);
+    }, [urlCollection]);
 
     useEffect(() => {
         fetchCollections();
@@ -158,7 +165,7 @@ export default function LogsPage({ }: LogsPageProps) {
                 }
             });
 
-            const response = await fetch(`/api/audit-logs?${params}`);
+            const response = await fetch(`/api/logs?${params}`);
             if (!response.ok) throw new Error('Failed to fetch logs');
 
             const data = await response.json();
