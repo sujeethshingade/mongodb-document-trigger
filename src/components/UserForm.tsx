@@ -5,7 +5,7 @@ import { User, Address } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Removed Select components - no longer needed
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -40,19 +40,14 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
             setFormData({
                 name: userToEdit.name || '',
                 email: userToEdit.email || '',
-                role: userToEdit.role && userToEdit.role.trim() !== '' ? userToEdit.role : null,
+                role: userToEdit.role || null,
                 Address: userToEdit.Address || initialAddressState
             });
             setEditingUser(userToEdit._id || null);
         } else {
             resetForm();
         }
-    }, [userToEdit]); const handleSelectChange = (name: string, value: string) => {
-        setFormData({
-            ...formData,
-            [name]: value,
-        });
-    };
+    }, [userToEdit]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -176,19 +171,14 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                             />
                         </div>                        <div className="space-y-2">
                             <Label htmlFor="role">Role</Label>
-                            <Select
-                                value={formData.role && formData.role.trim() !== '' ? formData.role : undefined}
-                                onValueChange={(value) => handleSelectChange('role', value)}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a role" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                    <SelectItem value="user">User</SelectItem>
-                                    <SelectItem value="guest">Guest</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <Input
+                                id="role"
+                                name="role"
+                                type="text"
+                                value={formData.role || ''}
+                                onChange={handleChange}
+                                placeholder="Enter role"
+                            />
                         </div>
                     </div>
                     <div className="space-y-4">
