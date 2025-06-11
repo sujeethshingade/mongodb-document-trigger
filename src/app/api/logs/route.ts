@@ -23,13 +23,12 @@ export async function GET(request: Request) {
     
     // Determine which collection to query (new field-based logs or legacy logs)
     const useFieldLogs = url.searchParams.get('useFieldLogs') !== 'false'; // Default to true
-    const logsCollectionName = useFieldLogs ? `${collection}_logs` : 'auditLogs';
-    
-    // Build filter
+    const logsCollectionName = useFieldLogs ? `${collection}_logs` : 'auditLogs';    // Build filter
     const filter: Record<string, any> = {};
     
     if (documentId) {
-      filter.documentId = documentId;
+      filter.documentId = new RegExp(documentId, 'i'); // Case-insensitive partial match
+      console.log('Document ID filter applied:', documentId);
     }
     
     if (operationType) {
@@ -64,8 +63,7 @@ export async function GET(request: Request) {
     
     // Get total count
     const total = await db.collection(logsCollectionName).countDocuments(filter);
-    
-    // Get logs
+      // Get logs
     const logs = await db
       .collection(logsCollectionName)
       .find(filter)
@@ -73,7 +71,7 @@ export async function GET(request: Request) {
       .skip(skip)
       .limit(limit)
       .toArray();
-    
+        
     return NextResponse.json({
       data: logs,
       pagination: {

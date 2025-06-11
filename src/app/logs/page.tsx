@@ -156,9 +156,7 @@ function LogsPageContent() {
                 collection: selectedCollection,
                 useFieldLogs: 'true',
                 limit: '1000'
-            });
-
-            // Add filters
+            });            // Add filters
             Object.entries(filters).forEach(([key, value]) => {
                 if (value && key !== 'search') {
                     params.append(key, value);
@@ -166,10 +164,10 @@ function LogsPageContent() {
             });
 
             const response = await fetch(`/api/logs?${params}`);
-            if (!response.ok) throw new Error('Failed to fetch logs');
+            if (!response.ok) throw new Error('Failed to fetch logs'); const data = await response.json();
+            let allLogs = data.data || [];
 
-            const data = await response.json();
-            let allLogs = data.data || [];            // Apply search filter if needed
+            // Apply search filter if needed (only for general search, not specific filters)
             if (filters.search) {
                 const searchLower = filters.search.toLowerCase();
                 allLogs = allLogs.filter((log: FieldAuditLog) =>
