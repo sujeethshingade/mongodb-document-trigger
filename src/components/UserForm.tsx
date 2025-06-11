@@ -2,6 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { User, Address } from '@/lib/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, X } from 'lucide-react';
 
 interface UserFormProps {
     onUserSaved: () => void;
@@ -27,23 +35,26 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
 
     const [editingUser, setEditingUser] = useState<string | null>(null);
     const [error, setError] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    useEffect(() => {
+    const [isSubmitting, setIsSubmitting] = useState(false); useEffect(() => {
         if (userToEdit) {
             setFormData({
                 name: userToEdit.name || '',
                 email: userToEdit.email || '',
-                role: userToEdit.role || null,
+                role: userToEdit.role && userToEdit.role.trim() !== '' ? userToEdit.role : null,
                 Address: userToEdit.Address || initialAddressState
             });
             setEditingUser(userToEdit._id || null);
         } else {
             resetForm();
         }
-    }, [userToEdit]);
+    }, [userToEdit]); const handleSelectChange = (name: string, value: string) => {
+        setFormData({
+            ...formData,
+            [name]: value,
+        });
+    };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
 
         if (name.startsWith('Address.')) {
@@ -107,182 +118,189 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
             role: null,
             Address: initialAddressState
         });
-    };
-
-    return (
-        <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                <h2 className="text-xl font-medium text-gray-800">
+    }; return (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
+                <CardTitle className="text-xl font-semibold">
                     {editingUser ? 'Edit User' : 'Add New User'}
-                </h2>                {editingUser && (
-                    <div className="px-3 py-1 text-sm bg-blue-500 text-white rounded-full">
-                        Editing User: {formData.email}
-                    </div>
+                </CardTitle>
+                {editingUser && (
+                    <Badge variant="secondary" className="flex items-center gap-2">
+                        <span>Editing:</span>
+                        <span className="font-medium">{formData.email}</span>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 p-0 hover:bg-transparent"
+                            onClick={resetForm}
+                        >
+                            <X className="h-3 w-3" />
+                        </Button>
+                    </Badge>
                 )}
-            </div>
+            </CardHeader>
 
-            <div className="p-6">
+            <CardContent>
                 {error && (
-                    <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded">
-                        <p className="text-red-700">{error}</p>
-                    </div>
+                    <Alert variant="destructive" className="mb-6">
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="name">
-                                Name
-                            </label>                            <input
-                                className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Name *</Label>
+                            <Input
                                 id="name"
-                                type="text"
                                 name="name"
+                                type="text"
                                 value={formData.name || ''}
                                 onChange={handleChange}
+                                placeholder="Enter full name"
                                 required
-                                placeholder="Enter Name"
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
-                                Email
-                            </label>                            <input
-                                className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email *</Label>
+                            <Input
                                 id="email"
-                                type="email"
                                 name="email"
+                                type="email"
                                 value={formData.email || ''}
                                 onChange={handleChange}
+                                placeholder="Enter email address"
                                 required
-                                placeholder="Enter Email"
                             />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="role">
-                                Role
-                            </label>                            <select
-                                className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
-                                id="role"
-                                name="role"
-                                value={formData.role || ''}
-                                onChange={handleChange}
+                        </div>                        <div className="space-y-2">
+                            <Label htmlFor="role">Role</Label>
+                            <Select
+                                value={formData.role && formData.role.trim() !== '' ? formData.role : undefined}
+                                onValueChange={(value) => handleSelectChange('role', value)}
                             >
-                                <option value="">Select a Role</option>
-                                <option value="admin">Admin</option>
-                                <option value="user">User</option>
-                                <option value="guest">Guest</option>
-                            </select>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="user">User</SelectItem>
+                                    <SelectItem value="guest">Guest</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
+                    <div className="space-y-4">
+                        <div className="border-t pt-4">
+                            <h3 className="text-lg font-medium mb-4">Address Information</h3>
+                        </div>
 
-                    <div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="Address.AddressLine1">
-                                    Address Line 1
-                                </label>                                <input
-                                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+                            <div className="space-y-2">
+                                <Label htmlFor="Address.AddressLine1">Address Line 1</Label>
+                                <Input
                                     id="Address.AddressLine1"
-                                    type="text"
                                     name="Address.AddressLine1"
+                                    type="text"
                                     value={formData.Address?.AddressLine1 || ''}
                                     onChange={handleChange}
-                                    placeholder="Address Line 1"
+                                    placeholder="Street address"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="Address.AddressLine2">
-                                    Address Line 2
-                                </label>                                <input
-                                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+
+                            <div className="space-y-2">
+                                <Label htmlFor="Address.AddressLine2">Address Line 2</Label>
+                                <Input
                                     id="Address.AddressLine2"
-                                    type="text"
                                     name="Address.AddressLine2"
+                                    type="text"
                                     value={formData.Address?.AddressLine2 || ''}
                                     onChange={handleChange}
-                                    placeholder="Address Line 2"
+                                    placeholder="Apartment, suite, etc."
                                 />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="Address.City">
-                                    City
-                                </label>                                <input
-                                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="Address.City">City</Label>
+                                <Input
                                     id="Address.City"
-                                    type="text"
                                     name="Address.City"
+                                    type="text"
                                     value={formData.Address?.City || ''}
                                     onChange={handleChange}
                                     placeholder="City"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="Address.State">
-                                    State
-                                </label>                                <input
-                                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+
+                            <div className="space-y-2">
+                                <Label htmlFor="Address.State">State</Label>
+                                <Input
                                     id="Address.State"
-                                    type="text"
                                     name="Address.State"
+                                    type="text"
                                     value={formData.Address?.State || ''}
                                     onChange={handleChange}
                                     placeholder="State"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="Address.Country">
-                                    Country
-                                </label>                                <input
-                                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+
+                            <div className="space-y-2">
+                                <Label htmlFor="Address.Country">Country</Label>
+                                <Input
                                     id="Address.Country"
-                                    type="text"
                                     name="Address.Country"
+                                    type="text"
                                     value={formData.Address?.Country || ''}
                                     onChange={handleChange}
                                     placeholder="Country"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="Address.ZipCode">
-                                    Zip Code
-                                </label>                                <input
-                                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+
+                            <div className="space-y-2">
+                                <Label htmlFor="Address.ZipCode">Zip Code</Label>
+                                <Input
                                     id="Address.ZipCode"
-                                    type="text"
                                     name="Address.ZipCode"
+                                    type="text"
                                     value={formData.Address?.ZipCode || ''}
                                     onChange={handleChange}
-                                    placeholder="Zip Code"
+                                    placeholder="Zip code"
                                 />
                             </div>
                         </div>
                     </div>
-
-                    <div className="pt-4 flex items-center justify-end space-x-3 border-t border-gray-100">
-                        {editingUser && (<button
-                            className="px-4 py-2 text-sm rounded-md bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring transition-colors duration-200"
-                            type="button"
-                            onClick={resetForm}
-                        >
-                            Cancel
-                        </button>
+                    <div className="flex items-center justify-end gap-3 pt-6 border-t">
+                        {editingUser && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={resetForm}
+                                disabled={isSubmitting}
+                            >
+                                Cancel
+                            </Button>
                         )}
-                        <button
-                            className={`px-4 py-2 text-sm text-white font-semibold bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 focus:ring-blue-500 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        <Button
                             type="submit"
                             disabled={isSubmitting}
+                            className="min-w-[120px]"
                         >
-                            {isSubmitting ? 'Saving...' : editingUser ? 'Update User' : 'Add User'}
-                        </button>
+                            {isSubmitting && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            {isSubmitting
+                                ? 'Saving...'
+                                : editingUser
+                                    ? 'Update User'
+                                    : 'Add User'
+                            }
+                        </Button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </CardContent>
+        </Card>
     );
 } 
