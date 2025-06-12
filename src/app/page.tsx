@@ -6,7 +6,23 @@ import UserForm from "@/components/UserForm";
 import UserList from "@/components/UserList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Plus } from 'lucide-react';
-import { User } from '@/lib/types';
+
+interface User {
+  _id?: string;
+  name: string;
+  email: string;
+  role?: string | null;
+  Address?: Address | null;
+}
+
+interface Address {
+  AddressLine1?: string | null;
+  AddressLine2?: string | null;
+  City?: string | null;
+  State?: string | null;
+  Country?: string | null;
+  ZipCode?: string | null;
+}
 
 export default function Home() {
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
@@ -16,7 +32,7 @@ export default function Home() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const response = await fetch('/api/collections/users');
+      const response = await fetch('/api/collections/users'); // API endpoint to fetch users
       if (!response.ok) throw new Error('Failed to fetch users');
       const data = await response.json();
       setUsers(data.data || []);
@@ -58,21 +74,11 @@ export default function Home() {
                 Manage Users
               </TabsTrigger>
             </TabsList>
-
             <TabsContent value="create" className="mt-6">
-              <UserForm
-                onUserSaved={handleUserSaved}
-                userToEdit={userToEdit}
-              />
+              <UserForm onUserSaved={handleUserSaved} userToEdit={userToEdit} />
             </TabsContent>
-
             <TabsContent value="manage" className="mt-6">
-              <UserList
-                users={users}
-                loading={loading}
-                onEditUser={handleEditUser}
-                onRefresh={fetchUsers}
-              />
+              <UserList users={users} loading={loading} onEditUser={handleEditUser} onRefresh={fetchUsers} />
             </TabsContent>
           </Tabs>
         </div>

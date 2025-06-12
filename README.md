@@ -1,315 +1,152 @@
 # MongoDB Document Trigger
 
-A comprehensive audit logging system for MongoDB that tracks document changes using MongoDB Change Streams and Database Triggers. This project provides real-time monitoring and detailed field-level audit trails for all CRUD operations.
+A comprehensive audit logging system for MongoDB that automatically tracks and logs every document change in real-time using MongoDB Change Streams and Database Triggers.
 
-## 🚀 Features
+## How It Works?
 
-- **Real-time Change Tracking**: Monitors MongoDB collections using change streams
-- **Field-level Audit Logs**: Tracks individual field changes with old/new values
-- **Nested Object Support**: Handles complex nested objects and arrays intelligently
-- **Web Dashboard**: Modern React/Next.js interface for viewing audit logs
-- **User Management**: Built-in user CRUD operations with audit trail
-- **Filter & Search**: Advanced filtering capabilities for audit logs
-- **Document History**: Complete change history for individual documents
-- **TTL Support**: Automatic cleanup of old audit logs
-- **Collection-based Logging**: Separate log collections for each monitored collection
+### Step-by-Step Process
 
-## 🏗️ Architecture
+1. **Change Detection**: When any document in your MongoDB database is modified (insert, update, delete, replace), MongoDB's Change Stream automatically detects the change
+2. **Trigger Activation**: The database trigger (`Trigger.js`) is instantly activated with the change event details
+3. **Field Analysis**: The trigger analyzes the change at the field level, comparing old vs new values
+4. **Audit Log Creation**: For each changed field, a separate audit log entry is created with complete metadata
+5. **Storage**: Audit logs are stored in dedicated collections (e.g., `users_logs` for `users` collection)
+6. **Web Interface**: The Next.js dashboard provides real-time access to view, search, and analyze all audit data
 
-### Components
+### What Gets Logged?
 
-1. **MongoDB Trigger** (`Trigger.js`): Database-side trigger function that captures change events
-2. **Next.js Frontend**: React-based web interface for viewing and managing data
-3. **API Routes**: RESTful endpoints for data operations
-4. **Audit Log Collections**: Dedicated collections for storing change history
+**For Each Changed Field:**
 
-### Data Flow
+- Document ID of the affected record
+- Operation Type (INSERT, UPDATE, DELETE, REPLACE)
+- Changed Filed (including nested fields)
+- Old value (before change)
+- New value (after change)
+- Updated By (User who made the change)
+- Exact timestamp of the change
 
+**Example**: When a user updates their email from `old@email.com` to `new@email.com`, the system creates:
+
+``` json
+{
+  "documentId": "507f1f77bcf86cd799439011",
+  "operationType": "update",
+  "changedFields": "email",
+  "oldValue": "old@email.com",
+  "newValue": "new@email.com",
+  "updatedBy": "admin@email.com",
+  "timestamp": "2025-06-12T10:30:00.000Z"
+}
 ```
-MongoDB Collection → Change Stream → Database Trigger → Audit Log Collection → Web Interface
-```
 
-## 🛠️ Technology Stack
+## User Interface Guide
 
-- **Frontend**: Next.js 14, React 18, TypeScript
-- **Styling**: Tailwind CSS, Radix UI Components
-- **Database**: MongoDB with Change Streams
-- **Backend**: Next.js API Routes
-- **UI Components**: Shadcn/ui, Lucide React Icons
+### Home Page (`http://localhost:3000/`)
 
-## 📋 Prerequisites
+**What You'll See:**
 
-- Node.js 18+ 
-- MongoDB Atlas M10+ cluster (for change streams and pre/post images)
-- MongoDB database with change streams enabled
+- **Create User Tab**: Form to add new users with name, email, role, and complete address
+- **Manage Users Tab**: Table showing all users with edit/delete buttons
+- **Real-time Updates**: User list automatically refreshes after any operation
 
-## 🚀 Installation
+**What Gets Audited:**
 
-### 1. Clone the Repository
+- Every user creation, update, and deletion
+- Field-level changes (name, email, role, address components)
+
+### Audit Logs Page (`http://localhost:3000/logs`)
+
+**What You'll See:**
+
+- **Collection Selector**: Dropdown to choose which collection's logs to view
+- **Search & Filters**:
+  - Global search across all fields
+  - Document ID filter
+  - Changed field filter
+- **Document Summary Table**: Shows documents that have been modified with:
+  - Document ID (clickable for detailed history)
+  - Last operation performed
+  - Last modification timestamp
+
+**How to Use:**
+
+1. Select a Collection from the dropdown
+2. Use filters to narrow down results
+3. Click any document ID to see detailed change history
+
+### Document History Page (`http://localhost:3000/document/[id]`)
+
+**What You'll See:**
+
+- **Document Information**: Document ID
+- **Complete Change Timeline**: Chronological table showing:
+  - Operation Type (INSERT/UPDATE/DELETE)
+  - Changed Field
+  - Previous Value
+  - New Value
+  - Updated By
+  - Timestamp
+
+**How to Access:**
+
+- Click any document ID in the logs page
+- Or navigate directly: `/document/[documentId]?collection=[collectionName]`
+
+## Setup Guide
+
+### Step 1: Project Setup
 
 ```bash
+# Clone the repository
 git clone https://github.com/sujeethshingade/mongodb-document-trigger.git
 cd mongodb-document-trigger
-```
 
-### 2. Install Dependencies
-
-```bash
+# Install dependencies
 npm install
-# or
-yarn install
+
+# Create environment file
+touch .env.local
 ```
 
-### 3. Environment Setup
+### Step 2: MongoDB Configuration
 
-Create a `.env.local` file in the root directory:
-
-```env
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/test?retryWrites=true&w=majority
-```
-
-### 4. MongoDB Configuration
-
-#### Enable Change Streams and Pre/Post Images
-
-Connect to your MongoDB cluster using mongosh and run:
-
-```javascript
-// Enable pre and post images for change streams (requires M10+ cluster)
-db.adminCommand({ 
-  setClusterParameter: {
-    changeStreamOptions: { 
-      preAndPostImages: { 
-        expireAfterSeconds: 604800 // 7 days retention
-      } 
-    }
-  }
-})
-
-// Create TTL index for automatic cleanup of audit logs
-db.users_logs.createIndex(
-  { "timestamp": 1 },
-  { expireAfterSeconds: 604800, name: "timestamp_1" }
-);
-```
-
-#### Deploy the Database Trigger
-
-1. Go to MongoDB Atlas → Database → Triggers
-2. Create a new trigger with the following configuration:
-   - **Trigger Type**: Database
-   - **Name**: `audit-trigger`
-   - **Enabled**: Yes
-   - **Event Ordering**: Yes
-   - **Skip Events**: No
-   - **Cluster Name**: Your cluster name
-   - **Database Name**: `test` (or your database name)
-   - **Collection Name**: Leave empty to monitor all collections
-   - **Operation Type**: Insert, Update, Delete
-   - **Full Document**: Yes
-   - **Document Preimage**: Yes
-
-3. Copy the contents of `Trigger.js` into the function editor
-4. Save and deploy the trigger
-
-### 5. Run the Application
+Connect to your MongoDB cluster using MongoDB Atlas
 
 ```bash
+# Edit .env.local with your MongoDB connection string
+MONGODB_URI=your-mongodb-commection-url
+```
+
+### Step 3: Deploy the Database Trigger
+
+1. Under Services choose Triggers and select **Add Trigger**
+2. **Trigger Details**:
+   - Trigger Type: Database
+   - Watch Against: Collection
+   - Cluster Name: Select the Cluster
+   - Database Name: Select the Database
+   - Collection Name: Select the Collection that Trigger needs to be setup
+   - Operation Type: Select all (Insert, Update, Delete, Replace)
+   - Full Document: ✅ Yes
+   - Document Preimage: ✅ Yes (REQUIRED)
+
+3. **Function Configurations**:
+   - Auto-Resume: ✅ Yes
+   - Event Ordering: ✅ Yes
+   - Event Type: Function
+   - Copy and paste the entire contents of `Trigger.js` from this project and run
+   - Trigger Name: Name the Trigger
+   - Save the Trigger
+
+### Step 4: Run the Application
+
+```bash
+# Start development server
 npm run dev
-# or
-yarn dev
+
+# Or build for production
+npm run build
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to access the application.
-
-## 📖 Usage
-
-### Web Interface
-
-#### Home Page (`/`)
-- Create, edit, and delete users
-- All operations are automatically audited
-- Real-time updates to the user list
-
-#### Audit Logs Page (`/logs`)
-- View document summaries by collection
-- Filter logs by document ID, changed fields, or search terms
-- Click on any document to view detailed change history
-
-#### Document History (`/document/[id]`)
-- Complete audit trail for a specific document
-- Field-level changes with old/new values
-- Timeline view of all modifications
-
-### API Endpoints
-
-#### Collections
-- `GET /api/collections` - List all available collections
-- `GET /api/collections/[collection]` - Get documents from a collection
-- `GET /api/collections/[collection]/[id]` - Get specific document
-- `POST /api/collections/[collection]` - Create new document
-- `PUT /api/collections/[collection]/[id]` - Update document
-- `DELETE /api/collections/[collection]/[id]` - Delete document
-
-#### Audit Logs
-- `GET /api/logs` - Get audit logs with filtering options
-
-Query parameters:
-- `collection` - Target collection name
-- `documentId` - Filter by document ID
-- `operationType` - Filter by operation (insert/update/delete)
-- `changedFields` - Filter by field name
-- `updatedBy` - Filter by user
-- `startDate` / `endDate` - Date range filtering
-- `limit` / `skip` - Pagination
-- `sortBy` / `sortOrder` - Sorting options
-
-## 🔧 Configuration
-
-### Excluded Fields
-
-The trigger automatically excludes certain fields from audit logging:
-
-```javascript
-const excludedFields = ['_id', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy', '__v'];
-```
-
-### Meaningful Value Detection
-
-The system only logs fields with meaningful values (not null, undefined, empty string, or empty objects):
-
-```javascript
-const isMeaningfulValue = (value) => {
-    if (value === null || value === undefined || value === '') return false;
-    if (typeof value === 'object' && !Array.isArray(value)) {
-        const keys = Object.keys(value);
-        if (keys.length === 0) return false;
-        return keys.some(key => isMeaningfulValue(value[key]));
-    }
-    return true;
-};
-```
-
-### TTL Configuration
-
-Audit logs are automatically cleaned up after 7 days by default. To modify retention:
-
-```javascript
-// Change retention period (in seconds)
-db.collection_logs.createIndex(
-  { "timestamp": 1 },
-  { expireAfterSeconds: 2592000 } // 30 days
-);
-```
-
-## 📊 Audit Log Schema
-
-### Field-based Audit Log
-
-```typescript
-interface FieldAuditLog {
-  _id?: string;
-  documentId: string;           // ID of the changed document
-  operationType: 'insert' | 'update' | 'delete';
-  changedFields: string;        // Field path (e.g., "Address.City")
-  oldValue: any;               // Previous value
-  newValue: any;               // New value
-  updatedBy: string;           // User who made the change
-  timestamp: Date;             // When the change occurred
-}
-```
-
-### User Schema
-
-```typescript
-interface User {
-  _id?: string;
-  name: string;
-  email: string;
-  role?: string | null;
-  Address?: {
-    AddressLine1?: string | null;
-    AddressLine2?: string | null;
-    City?: string | null;
-    State?: string | null;
-    Country?: string | null;
-    ZipCode?: string | null;
-  } | null;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-```
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-1. **Change Streams Not Working**
-   - Ensure you're using MongoDB Atlas M10+ cluster
-   - Verify change streams are enabled in cluster settings
-
-2. **Pre/Post Images Missing**
-   - Requires MongoDB 6.0+ and M10+ cluster
-   - Enable using the admin command shown in setup
-
-3. **Trigger Not Firing**
-   - Check trigger is enabled in Atlas
-   - Verify database and collection names match
-   - Review trigger logs in Atlas
-
-4. **Empty Audit Logs**
-   - Ensure meaningful data is being changed
-   - Check excluded fields configuration
-   - Verify trigger deployment
-
-### Performance Considerations
-
-- Use TTL indexes to prevent unlimited log growth
-- Consider sharding for high-volume collections
-- Monitor change stream performance
-- Implement proper indexes on audit collections
-
-## 🧪 Testing
-
-### Manual Testing
-
-1. **Create a User**
-   ```bash
-   # Navigate to home page and create a new user
-   # Check logs page to verify audit entries
-   ```
-
-2. **Update Operations**
-   ```bash
-   # Edit user information
-   # Verify field-level changes are captured
-   ```
-
-3. **Delete Operations**
-   ```bash
-   # Delete a user
-   # Confirm deletion is logged with all field values
-   ```
-
-### Database Testing
-
-```javascript
-// Connect to MongoDB and test manually
-db.users.insertOne({
-  name: "Test User",
-  email: "test@example.com",
-  Address: {
-    City: "New York",
-    State: "NY"
-  }
-});
-
-// Check audit logs
-db.users_logs.find().sort({timestamp: -1});
-```
-
-
-
----
-
-**Built with ❤️ using MongoDB and Next.js**
+**Access the application at**: `http://localhost:3000`

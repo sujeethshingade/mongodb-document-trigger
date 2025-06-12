@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "MongoDB Document Trigger",
-  description: "A simple MongoDB document trigger example",
+  description: "A simple app to trigger MongoDB document changes",
 };
 
 export default function RootLayout({

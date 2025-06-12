@@ -3,30 +3,29 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FieldAuditLog } from '@/lib/types';
-import { Search, Filter } from 'lucide-react';
+import { Search } from 'lucide-react';
 
-interface LogsPageProps { }
+interface FieldAuditLog {
+    _id?: string;
+    documentId: string;
+    operationType: 'insert' | 'update' | 'delete';
+    changedFields: string;
+    oldValue: any;
+    newValue: any;
+    updatedBy: string;
+    timestamp: Date;
+}
 
 interface DocumentSummary {
     documentId: string;
-    email?: string;
     lastOperation: string;
     lastUpdated: Date;
-    totalChanges: number;
-}
-
-interface PaginationInfo {
-    total: number;
-    limit: number;
-    skip: number;
-    hasMore: boolean;
 }
 
 interface Collection {
@@ -35,13 +34,7 @@ interface Collection {
     description: string;
 }
 
-function DocumentsTable({
-    documents,
-    selectedCollection
-}: {
-    documents: DocumentSummary[];
-    selectedCollection: string;
-}) {
+function DocumentsTable({ documents, selectedCollection }: { documents: DocumentSummary[]; selectedCollection: string; }) {
     const router = useRouter();
 
     if (documents.length === 0) {
@@ -57,32 +50,31 @@ function DocumentsTable({
             <TableHeader>
                 <TableRow>
                     <TableHead>Document ID</TableHead>
-                    <TableHead>User/Email</TableHead>
                     <TableHead>Last Operation</TableHead>
                     <TableHead>Last Updated</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {documents.map((doc) => (<TableRow
-                    key={doc.documentId}
-                    onClick={() => router.push(`/document/${doc.documentId}?collection=${selectedCollection}`)}
-                    className="cursor-pointer hover:bg-muted/50"
-                >
-                    <TableCell className="font-mono text-sm">{doc.documentId}</TableCell>
-                    <TableCell>{doc.email || <span className="text-muted-foreground">Unknown</span>}</TableCell>
-                    <TableCell>
-                        <Badge className={
-                            doc.lastOperation === 'insert' ? 'bg-green-500' :
-                                doc.lastOperation === 'update' ? 'bg-amber-500' : 'bg-red-500'
-                        }>
-                            {doc.lastOperation.toUpperCase()}
-                        </Badge>
-                    </TableCell>
-                    <TableCell>{new Intl.DateTimeFormat('en-US', {
-                        dateStyle: 'short',
-                        timeStyle: 'medium'
-                    }).format(doc.lastUpdated)}</TableCell>
-                </TableRow>
+                {documents.map((doc) => (
+                    <TableRow
+                        key={doc.documentId}
+                        onClick={() => router.push(`/document/${doc.documentId}?collection=${selectedCollection}`)} // Navigate to detailed document history
+                        className="cursor-pointer hover:bg-muted/50"
+                    >
+                        <TableCell className="font-mono text-sm">{doc.documentId}</TableCell>
+                        <TableCell>
+                            <Badge className={
+                                doc.lastOperation === 'insert' ? 'bg-green-500' :
+                                    doc.lastOperation === 'update' ? 'bg-amber-500' : 'bg-red-500'
+                            }>
+                                {doc.lastOperation.toUpperCase()}
+                            </Badge>
+                        </TableCell>
+                        <TableCell>{new Intl.DateTimeFormat('en-US', {
+                            dateStyle: 'short',
+                            timeStyle: 'medium'
+                        }).format(doc.lastUpdated)}</TableCell>
+                    </TableRow>
                 ))}
             </TableBody>
         </Table>
@@ -90,7 +82,6 @@ function DocumentsTable({
 }
 
 function LogsPageContent() {
-    const router = useRouter();
     const searchParams = useSearchParams();
     const urlCollection = searchParams.get('collection'); // Get collection from URL
 
@@ -98,47 +89,32 @@ function LogsPageContent() {
     const [selectedCollection, setSelectedCollection] = useState(urlCollection || '');
     const [collectionsLoading, setCollectionsLoading] = useState(true);
     const [documentSummaries, setDocumentSummaries] = useState<DocumentSummary[]>([]);
-    const [loading, setLoading] = useState(true);    // Filters (removed operationType and updatedBy)
+    const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({
         documentId: '',
         changedFields: '',
         search: ''
-    });    // Fetch available collections
+    });
+
     const fetchCollections = useCallback(async () => {
         setCollectionsLoading(true);
         try {
-            const response = await fetch('/api/collections');
+            const response = await fetch('/api/collections'); // API endpoint to fetch collections
             if (!response.ok) throw new Error('Failed to fetch collections');
-
             const data = await response.json();
             setCollections(data.collections || []);
 
-            // Only set collection if we don't have one selected yet
             if (data.collections && data.collections.length > 0) {
                 setSelectedCollection(prev => {
-                    // If we already have a selection, keep it
                     if (prev) return prev;
-
-                    // Check if URL collection exists in the list
                     if (urlCollection && data.collections.find((c: Collection) => c.value === urlCollection)) {
                         return urlCollection;
                     }
-
-                    // Default to first collection
-                    return data.collections[0].value;
+                    return data.collections[0].value; // Default to first collection if none selected
                 });
             }
         } catch (error) {
             console.error('Error fetching collections:', error);
-            // Fallback to default collections if API fails
-            const fallbackCollections = [
-                { value: 'users', label: 'Users', description: 'User account data' }
-            ];
-            setCollections(fallbackCollections);
-            setSelectedCollection(prev => {
-                if (prev) return prev;
-                return urlCollection || 'users';
-            });
         } finally {
             setCollectionsLoading(false);
         }
@@ -148,26 +124,25 @@ function LogsPageContent() {
         fetchCollections();
     }, [fetchCollections]);
 
-    // Fetch document summaries
     const fetchDocumentSummaries = useCallback(async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams({
                 collection: selectedCollection,
                 useFieldLogs: 'true',
-                limit: '1000'
-            });            // Add filters
+            });
+
             Object.entries(filters).forEach(([key, value]) => {
                 if (value && key !== 'search') {
                     params.append(key, value);
                 }
             });
 
-            const response = await fetch(`/api/logs?${params}`);
-            if (!response.ok) throw new Error('Failed to fetch logs'); const data = await response.json();
+            const response = await fetch(`/api/logs?${params}`); // API endpoint to fetch logs
+            if (!response.ok) throw new Error('Failed to fetch logs');
+            const data = await response.json();
             let allLogs = data.data || [];
 
-            // Apply search filter if needed (only for general search, not specific filters)
             if (filters.search) {
                 const searchLower = filters.search.toLowerCase();
                 allLogs = allLogs.filter((log: FieldAuditLog) =>
@@ -178,22 +153,18 @@ function LogsPageContent() {
                 );
             }
 
-            // Group logs by document ID
+            // Create a map to summarize documents, each document will have its last operation and last updated timestamp
             const documentMap = new Map<string, DocumentSummary>();
-
             allLogs.forEach((log: FieldAuditLog) => {
                 if (!documentMap.has(log.documentId)) {
                     documentMap.set(log.documentId, {
                         documentId: log.documentId,
-                        email: log.updatedBy !== 'system' ? log.updatedBy : undefined,
                         lastOperation: log.operationType,
                         lastUpdated: new Date(log.timestamp),
-                        totalChanges: 0
                     });
                 }
 
                 const summary = documentMap.get(log.documentId)!;
-                summary.totalChanges++;
 
                 if (new Date(log.timestamp) > summary.lastUpdated) {
                     summary.lastUpdated = new Date(log.timestamp);
@@ -201,6 +172,7 @@ function LogsPageContent() {
                 }
             });
 
+            // Convert map to sorted array
             const summaries = Array.from(documentMap.values())
                 .sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime());
 
@@ -220,37 +192,29 @@ function LogsPageContent() {
 
     const handleFilterChange = (key: string, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value }));
-    }; const resetFilters = () => {
-        setFilters({
-            documentId: '',
-            changedFields: '',
-            search: ''
-        });
+    };
+
+    const resetFilters = () => {
+        setFilters({ documentId: '', changedFields: '', search: '' });
     };
 
     return (
         <>
             <Navbar />
             <div className="min-h-screen bg-background">
-                <div className="container mx-auto px-4 py-6">                    {/* Collection Selection */}
+                <div className="container mx-auto px-4 py-6">
                     <Card className="mb-6">
                         <CardHeader>
                             <div className="flex items-center justify-end gap-2">
                                 <span className="text-base font-medium">Select Collection:</span>
-                                <Select
-                                    value={selectedCollection}
-                                    onValueChange={setSelectedCollection}
-                                    disabled={collectionsLoading}
-                                >
+                                <Select value={selectedCollection} onValueChange={setSelectedCollection} disabled={collectionsLoading}>
                                     <SelectTrigger className="w-[200px]">
                                         <SelectValue placeholder={collectionsLoading ? "Loading..." : "Select collection"} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {collections.map((collection) => (
                                             <SelectItem key={collection.value} value={collection.value}>
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium">{collection.label}</span>
-                                                </div>
+                                                <span className="font-medium">{collection.label}</span>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -269,32 +233,26 @@ function LogsPageContent() {
                                         className="pl-9"
                                     />
                                 </div>
-
                                 <Input
                                     placeholder="Document ID"
                                     value={filters.documentId}
                                     onChange={(e) => handleFilterChange('documentId', e.target.value)}
                                 />
-
                                 <Input
                                     placeholder="Changed Field"
                                     value={filters.changedFields}
                                     onChange={(e) => handleFilterChange('changedFields', e.target.value)}
                                 />
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    variant="outline"
-                                    onClick={resetFilters}
-                                    disabled={!Object.values(filters).some(val => val !== '')}
-                                >
-                                    Reset Filters
-                                </Button>
-                            </div>
+                            <Button
+                                variant="outline"
+                                onClick={resetFilters}
+                                disabled={!Object.values(filters).some(val => val !== '')}
+                            >
+                                Reset Filters
+                            </Button>
                         </CardContent>
                     </Card>
-
-                    {/* Content */}
                     <Card>
                         <CardContent className="p-0">
                             {loading ? (
@@ -305,10 +263,7 @@ function LogsPageContent() {
                                     </div>
                                 </div>
                             ) : (
-                                <DocumentsTable
-                                    documents={documentSummaries}
-                                    selectedCollection={selectedCollection}
-                                />
+                                <DocumentsTable documents={documentSummaries} selectedCollection={selectedCollection} />
                             )}
                         </CardContent>
                     </Card>
@@ -318,7 +273,7 @@ function LogsPageContent() {
     );
 }
 
-export default function LogsPage({ }: LogsPageProps) {
+export default function LogsPage() {
     return (
         <Suspense fallback={
             <div className="min-h-screen bg-background">

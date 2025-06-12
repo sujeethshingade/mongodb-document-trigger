@@ -10,8 +10,9 @@ const options = {};
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
+// Use global variable in development to prevent hot reload connection issues
 if (process.env.NODE_ENV === 'development') {
-  let globalWithMongo = global as typeof global & {
+  const globalWithMongo = global as typeof global & {
     _mongoClientPromise?: Promise<MongoClient>;
   };
 
@@ -21,6 +22,7 @@ if (process.env.NODE_ENV === 'development') {
   }
   clientPromise = globalWithMongo._mongoClientPromise;
 } else {
+  // In production, create a new client instance
   client = new MongoClient(uri, options);
   clientPromise = client.connect();
 }

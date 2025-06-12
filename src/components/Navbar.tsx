@@ -7,13 +7,7 @@ import { FileText, Github, Home } from 'lucide-react';
 
 export default function Navbar() {
     const pathname = usePathname();
-
-    const isActive = (path: string) => {
-        if (path === '/' && pathname === '/') return true;
-        if (path !== '/' && pathname.startsWith(path)) return true;
-        return false;
-    };
-
+    const isActive = (path: string) => path === '/' ? pathname === '/' : pathname.startsWith(path);
     const navigation = [
         { name: 'Home', href: '/', icon: Home },
         { name: 'Audit Logs', href: '/logs', icon: FileText },
@@ -24,9 +18,7 @@ export default function Navbar() {
             <div className="container mx-auto px-4 h-16 flex justify-between items-center">
                 <div className="flex items-center space-x-8">
                     <Link href="/" className="flex items-center space-x-3 font-semibold text-xl hover:text-foreground/80 transition-colors group">
-                        <div className="flex flex-col">
-                            <span className="lg:inline text-foreground">MongoDB Document Trigger</span>
-                        </div>
+                        <span className="lg:inline text-foreground">MongoDB Document Trigger</span>
                     </Link>
 
                     <div className="hidden md:flex items-center space-x-1">
@@ -51,7 +43,6 @@ export default function Navbar() {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                    {/* Mobile Navigation */}
                     <div className="md:hidden flex items-center space-x-1">
                         {navigation.map((item) => {
                             const Icon = item.icon;
@@ -71,7 +62,6 @@ export default function Navbar() {
                         })}
                     </div>
 
-                    {/* GitHub Link */}
                     <Button variant="outline" size="sm" asChild className="h-9">
                         <a
                             href="https://github.com/sujeethshingade/mongodb-document-trigger"

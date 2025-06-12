@@ -1,15 +1,30 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Address } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-// Removed Select components - no longer needed
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, X } from 'lucide-react';
+
+interface User {
+  _id?: string;
+  name: string;
+  email: string;
+  role?: string | null;
+  Address?: Address | null;
+}
+
+interface Address {
+  AddressLine1?: string | null;
+  AddressLine2?: string | null;
+  City?: string | null;
+  State?: string | null;
+  Country?: string | null;
+  ZipCode?: string | null;
+}
 
 interface UserFormProps {
     onUserSaved: () => void;
@@ -17,31 +32,24 @@ interface UserFormProps {
 }
 
 export default function UserForm({ onUserSaved, userToEdit = null }: UserFormProps) {
-    const initialAddressState: Address = {
-        AddressLine1: null,
-        AddressLine2: null,
-        City: null,
-        State: null,
-        Country: null,
-        ZipCode: null
-    };
-
     const [formData, setFormData] = useState<Partial<User>>({
-        name: '',
-        email: '',
-        role: null,
-        Address: initialAddressState
+        name: '', email: '', role: null, Address: {}
     });
-
     const [editingUser, setEditingUser] = useState<string | null>(null);
     const [error, setError] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false); useEffect(() => {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const resetForm = () => {
+        setFormData({ name: '', email: '', role: null, Address: {} });
+        setEditingUser(null);
+        setError('');
+    }; useEffect(() => {
         if (userToEdit) {
             setFormData({
                 name: userToEdit.name || '',
                 email: userToEdit.email || '',
                 role: userToEdit.role || null,
-                Address: userToEdit.Address || initialAddressState
+                Address: userToEdit.Address || {}
             });
             setEditingUser(userToEdit._id || null);
         } else {
@@ -51,21 +59,11 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-
         if (name.startsWith('Address.')) {
-            const addressField = name.split('.')[1];
-            setFormData({
-                ...formData,
-                Address: {
-                    ...formData.Address,
-                    [addressField]: value === "" ? null : value,
-                }
-            });
+            const field = name.split('.')[1];
+            setFormData(prev => ({ ...prev, Address: { ...prev.Address, [field]: value || null } }));
         } else {
-            setFormData({
-                ...formData,
-                [name]: value === "" ? null : value,
-            });
+            setFormData(prev => ({ ...prev, [name]: value || null }));
         }
     }; const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -74,21 +72,18 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
 
         try {
             const isEditing = !!editingUser;
-            const url = isEditing ? `/api/collections/users/${editingUser}` : '/api/collections/users';
-            const method = isEditing ? 'PUT' : 'POST';
-
-            // Remove null/undefined fields to prevent unnecessary audit logs
-            const cleanFormData = Object.fromEntries(
-                Object.entries(formData).filter(([_, value]) => value !== null && value !== undefined && value !== '')
+            const cleanData = Object.fromEntries(
+                Object.entries(formData).filter(([_, v]) => v !== null && v !== undefined && v !== '')
             );
 
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(cleanFormData),
-            });
+            const response = await fetch(
+                isEditing ? `/api/collections/users/${editingUser}` : '/api/collections/users', // API endpoint for user creation or update
+                {
+                    method: isEditing ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cleanData)
+                }
+            );
 
             if (!response.ok) {
                 const data = await response.json();
@@ -105,15 +100,7 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
         }
     };
 
-    const resetForm = () => {
-        setEditingUser(null);
-        setFormData({
-            name: '',
-            email: '',
-            role: null,
-            Address: initialAddressState
-        });
-    }; return (
+    return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
                 <CardTitle className="text-xl font-semibold">
@@ -177,15 +164,11 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                                 type="text"
                                 value={formData.role || ''}
                                 onChange={handleChange}
-                                placeholder="Enter role"
+                                placeholder="Enter your role"
                             />
                         </div>
                     </div>
                     <div className="space-y-4">
-                        <div className="border-t pt-4">
-                            <h3 className="text-lg font-medium mb-4">Address Information</h3>
-                        </div>
-
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="Address.AddressLine1">Address Line 1</Label>
@@ -262,7 +245,7 @@ export default function UserForm({ onUserSaved, userToEdit = null }: UserFormPro
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center justify-end gap-3 pt-6 border-t">
+                    <div className="flex items-center justify-end gap-2 pt-6">
                         {editingUser && (
                             <Button
                                 type="button"
