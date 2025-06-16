@@ -1,0 +1,17 @@
+[
+  {
+    "name": "auditLogs",
+    "type": "DATABASE",
+    "disabled": false,
+    "function_name": "auditLogFunction",
+    "config": {
+      "operation_types": ["INSERT", "UPDATE", "DELETE", "REPLACE"],
+      "database": "test",
+      "collection": "test3",
+      "service_name": "mongodb-document-trigger",
+      "match": {},
+      "full_document": true,
+      "full_document_before_change": true
+    }
+  }
+]
