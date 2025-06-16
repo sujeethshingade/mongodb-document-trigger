@@ -6,11 +6,9 @@ exports = async function(changeEvent) {
 
         const mongodb = context.services.get("mongodb-atlas"); // Atlas App Services uses "mongodb-atlas" as default service name
         const logsCollection = mongodb.db("test").collection(`${collectionName}_logs`); // Adjust database name as needed
-        
         const { operationType } = changeEvent; // Get the operation type from the change event
         const documentId = (changeEvent.documentKey?._id || changeEvent.fullDocument?._id || changeEvent.fullDocumentBeforeChange?._id || "Unknown").toString(); // Get the document ID from the change event, fallback to "Unknown" if not available
-        const doc = changeEvent.fullDocument || changeEvent.fullDocumentBeforeChange; // Get the full document from the change event, either current or before change
-        const updatedBy = doc?.updatedBy || doc?.name || "System"; // Get the user who updated the document, fallback to "System" if not available
+        const updatedBy = context.user?.id || context.user?.data?.email || context.user?.data?.name || "Unknown"; // Get the user who made the change, fallback to "Unknown" if not available
         const timestamp = new Date(); // Create timestamp for when this audit log entry is being created
         const logEntries = []; // Array to store all the individual field change log entries
         const excludedFields = ['_id', '__v', 'updatedAt']; // Fields to exclude from logging
