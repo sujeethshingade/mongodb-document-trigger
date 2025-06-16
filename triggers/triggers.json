@@ -1,13 +1,28 @@
 [
   {
-    "name": "auditLogs",
+    "name": "trigger1",
     "type": "DATABASE",
     "disabled": false,
     "function_name": "auditLogFunction",
     "config": {
       "operation_types": ["INSERT", "UPDATE", "DELETE", "REPLACE"],
       "database": "test",
-      "collection": "test3",
+      "collection": "collection1",
+      "service_name": "mongodb-document-trigger",
+      "match": {},
+      "full_document": true,
+      "full_document_before_change": true
+    }
+  },
+  {
+    "name": "trigger2",
+    "type": "DATABASE",
+    "disabled": false,
+    "function_name": "auditLogFunction",
+    "config": {
+      "operation_types": ["INSERT", "UPDATE", "DELETE", "REPLACE"],
+      "database": "test",
+      "collection": "collection2",
       "service_name": "mongodb-document-trigger",
       "match": {},
       "full_document": true,
