@@ -108,35 +108,96 @@ npm install
 touch .env.local
 ```
 
-### Step 2: MongoDB Configuration
-
-Connect to your MongoDB cluster using MongoDB Atlas
+### Step 2: MongoDB Atlas Configuration
 
 ```bash
-# Edit .env.local with your MongoDB connection string
-MONGODB_URI=your-mongodb-commection-url
+# Edit .env.local with your credentials
+MONGODB_URI=your_mongodb_connection_string
+
+# MongoDB Atlas API Configuration for Triggers Setup
+ATLAS_PUBLIC_KEY=your_atlas_public_key_here
+ATLAS_PRIVATE_KEY=your_atlas_private_key_here
+ATLAS_PROJECT_ID=your_atlas_project_id_here
+ATLAS_APP_ID=your_atlas_app_id_here
 ```
 
-### Step 3: Deploy the Database Trigger
+**How to Get Atlas Credentials?**
 
-1. Under Services choose Triggers and select **Add Trigger**
-2. **Trigger Details**:
-   - Trigger Type: Database
-   - Watch Against: Collection
-   - Cluster Name: Select the Cluster
-   - Database Name: Select the Database
-   - Collection Name: Select the Collection that Trigger needs to be setup
-   - Operation Type: Select all (Insert, Update, Delete, Replace)
-   - Full Document: ✅ Yes
-   - Document Preimage: ✅ Yes (REQUIRED)
+1. **API Keys**: Atlas → Access Manager → Project Access → Applications → API Keys → Create a new key
+2. **Project ID**: Atlas → Project Settings
+3. **App ID**: Atlas → App Services → Create App Service → App Settings
 
-3. **Function Configurations**:
+### Step 3: Deploy Database Triggers
+
+**Option A: Automated Deployment (Recommended)**
+
+```bash
+# Deploy the audit function to Atlas App Services
+npm run deploy-functions
+
+# Create triggers automatically from triggers.json
+npm run setup-triggers
+```
+
+**Configure Triggers for Your Collections:**
+
+Edit [`triggers/triggers.json`](triggers/triggers.json) to match your collections:
+
+```json
+[
+  {
+    "name": "trigger_name",    // Adjust trigger name as requried
+    "type": "DATABASE",
+    "disabled": false,
+    "function_name": "auditLogFunction",
+    "config": {
+      "operation_types": ["INSERT", "UPDATE", "DELETE", "REPLACE"],
+      "database": "your_database_name",    // Adjust database name as requried
+      "collection": "collection_name",                 // Adjust collection name as requried for trigger to be setup on
+      "service_name": "mongodb-document-trigger",
+      "match": {},
+      "full_document": true,
+      "full_document_before_change": true
+    }
+  }      // Add more trigger objects for additional collections
+]
+```
+
+**Option B: Manual Setup via Atlas Dashboard**
+
+1. **Create App Service**:
+   - Atlas → App Services → Create App Service
+   - Choose your cluster and database
+   - Note the App ID for your `.env.local`
+
+2. **Deploy Function**:
+   - App Services → Functions → Create New Function
+   - Function Name: `auditLogFunction`
+   - Copy contents from [`triggers/auditLogFunction.js`](triggers/auditLogFunction.js)
+   - Save and Deploy
+
+3. **Create Triggers**:
+   - App Services → Triggers → Add Trigger
+   - **Trigger Details**:
+     - Trigger Type: Database
+     - Watch Against: Collection
+     - Cluster Name: Select your cluster
+     - Database Name: Select your database
+     - Collection Name: Select the collection to monitor
+     - Operation Type: Select all (Insert, Update, Delete, Replace)
+     - Full Document: ✅ Yes
+     - Document Preimage: ✅ Yes (REQUIRED)
+
+4. **Function Configuration**:
    - Auto-Resume: ✅ Yes
    - Event Ordering: ✅ Yes
    - Event Type: Function
-   - Copy and paste the entire contents of `Trigger.js` from this project and run
-   - Trigger Name: Name the Trigger
-   - Save the Trigger
+   - Function: Select `auditLogFunction` or Copy and paste the entire contents of `Trigger.js` from this project and run
+   - Trigger Name: Name the trigger
+   - Save the trigger
+
+5. **Export Trigger App in App Services (Not Requried for Setup)**:
+   - App Services → Select Created App → Deployment → Export App → Download as a .zip file
 
 ### Step 4: Run the Application
 
@@ -150,3 +211,19 @@ npm start
 ```
 
 **Access the application at**: `http://localhost:3000`
+
+## Bulk Trigger Management
+
+The [`triggers/`](triggers/) directory contains:
+
+- [`auditLogFunction.js`](triggers/auditLogFunction.js) - Main audit logging function
+- [`triggers.json`](triggers/triggers.json) - Trigger definitions for bulk creation
+- [`setup-triggers.js`](triggers/setup-triggers.js) - Automated trigger creation script
+- [`deploy-functions.js`](triggers/deploy-functions.js) - Function deployment script
+
+## Important Notes
+
+**M0 (Free Cluster) Limitations:**
+
+- **Auto-Resume**: Not supported for bulk creation of triggers on M0 clusters (works on individual creation). Database triggers cannot automatically resume after failures.
+- **Change Stream Options**: Implement Change Stream options not available on M0 clusters. Cannot set  the retention time for pre- and post-images in change streams for requried time.
